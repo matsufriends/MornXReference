@@ -334,6 +334,7 @@ function closeOverlay() {
 
 // 動画はグリッドで再生中の要素をそのまま移して使う (新しく作ると長い動画は読み込み直しで待たされる)
 function openLightbox(media, href, res, sourceEl) {
+  if (!overlayEl || overlayEl.querySelector('.mxr-lightbox')) return;
   const box = document.createElement('div');
   box.className = 'mxr-lightbox';
   let el;
