@@ -24,11 +24,7 @@ function isActiveRow(link) {
   return !!span && Number(getComputedStyle(span).fontWeight) >= 600;
 }
 
-function findSidebarRow(nav) {
-  const links = ROW_CANDIDATES.map((h) => nav.querySelector(`a[href="${h}"]`)).filter(Boolean);
-  // 現在地の項目 (太字) を複製すると「ギャラリー」が常に選択中の見た目になるので避ける
-  const link = links.find((l) => !isActiveRow(l)) || links[0];
-  if (!link) return null;
+function rowOf(nav, link) {
   let node = link;
   while (node.parentElement && node.parentElement !== nav) {
     node = node.parentElement;
@@ -36,13 +32,22 @@ function findSidebarRow(nav) {
   return node.parentElement === nav ? node : link;
 }
 
+// 挿入位置は常に先頭候補 (ブックマーク/履歴) の直後で固定。複製元だけ非選択の項目から選ぶ。
+function findSidebarRows(nav) {
+  const links = ROW_CANDIDATES.map((h) => nav.querySelector(`a[href="${h}"]`)).filter(Boolean);
+  if (links.length === 0) return null;
+  // 現在地の項目 (太字) を複製すると「ギャラリー」が常に選択中の見た目になるので避ける
+  const source = links.find((l) => !isActiveRow(l)) || links[0];
+  return { anchor: rowOf(nav, links[0]), source: rowOf(nav, source) };
+}
+
 function ensureGalleryItem() {
   const nav = document.querySelector('nav[role="navigation"]');
   if (!nav || nav.querySelector('[data-mornxref]')) return;
-  const row = findSidebarRow(nav);
-  if (!row) return;
+  const rows = findSidebarRows(nav);
+  if (!rows) return;
 
-  const clone = row.cloneNode(true);
+  const clone = rows.source.cloneNode(true);
   clone.dataset.mornxref = '1';
   const link = clone.matches('a') ? clone : clone.querySelector('a');
   if (!link) return;
@@ -55,7 +60,7 @@ function ensureGalleryItem() {
   const svg = clone.querySelector('svg');
   if (svg) svg.innerHTML = `<g><path d="${GRID_ICON_PATH}"></path></g>`;
   link.addEventListener('click', onGalleryClick);
-  row.after(clone);
+  rows.anchor.after(clone);
 }
 
 function onGalleryClick(e) {
@@ -156,7 +161,7 @@ function injectStyle() {
     .mxr-kinds { display: inline-flex; border: 1px solid var(--mxr-line); border-radius: 6px; overflow: hidden; }
     .mxr-kind { cursor: pointer; font-size: 13px; background: var(--mxr-soft); padding: 6px 12px; }
     .mxr-kind-on { color: var(--mxr-bg); background: var(--mxr-fg); }
-    .mxr-overlay { position: fixed; inset: 0; z-index: 2147483647; background: var(--mxr-bg); color: var(--mxr-fg); display: flex; flex-direction: column; }
+    .mxr-overlay { position: fixed; top: 0; right: 0; bottom: 0; left: var(--mxr-left, 0); z-index: 2147483647; background: var(--mxr-bg); color: var(--mxr-fg); display: flex; flex-direction: column; }
     .mxr-bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; flex: none; }
     .mxr-close { cursor: pointer; font-size: 18px; line-height: 1; background: var(--mxr-soft); border: 1px solid var(--mxr-line); border-radius: 6px; padding: 6px 12px; }
     .mxr-tile-size { cursor: pointer; }
@@ -176,6 +181,13 @@ function openOverlay() {
   const bodyStyle = getComputedStyle(document.body);
   overlay.style.setProperty('--mxr-bg', bodyStyle.backgroundColor);
   overlay.style.setProperty('--mxr-fg', bodyStyle.color);
+  // 画面全体ではなく、サイドバー (header) の右側だけを覆う
+  const fitToSidebar = () => {
+    const header = document.querySelector('header[role="banner"]');
+    overlay.style.setProperty('--mxr-left', `${header ? header.getBoundingClientRect().right : 0}px`);
+  };
+  fitToSidebar();
+  window.addEventListener('resize', fitToSidebar);
   overlay.innerHTML = `
     <div class="mxr-bar">
       <button class="mxr-close" type="button" aria-label="閉じる">&times;</button>
