@@ -168,8 +168,8 @@ function injectStyle() {
     .mxr-button:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
     .mxr-button-on { background: color-mix(in srgb, currentColor 15%, transparent); }
     .mxr-tilde { font-size: 13px; opacity: .7; }
-    .mxr-lightbox { position: absolute; inset: 0; z-index: 2147483647; background: color-mix(in srgb, var(--mxr-bg) 92%, transparent); display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
-    .mxr-lightbox video, .mxr-lightbox img { max-width: 96vw; max-height: 96vh; display: block; object-fit: contain; cursor: default; }
+    .mxr-lightbox { position: absolute; inset: 0; z-index: 2147483647; background: color-mix(in srgb, var(--mxr-bg) 92%, transparent); display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center; cursor: zoom-out; }
+    .mxr-lightbox video, .mxr-lightbox img { max-width: 96%; max-height: calc(100% - 60px); display: block; object-fit: contain; cursor: default; }
     .mxr-kinds { display: inline-flex; border: 1px solid var(--mxr-line); border-radius: 6px; overflow: hidden; }
     .mxr-kind { cursor: pointer; font-size: 13px; background: var(--mxr-soft); padding: 6px 12px; }
     .mxr-kind-on { color: var(--mxr-bg); background: var(--mxr-fg); }
@@ -184,7 +184,7 @@ function injectStyle() {
     .mxr-tile { display: block; }
     .mxr-media { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: contain; background: var(--mxr-soft); cursor: zoom-in; }
     .mxr-tile-link { display: block; font-size: 12px; color: #1d9bf0; text-decoration: underline; cursor: pointer; padding: 2px 4px 4px; }
-    .mxr-link { position: fixed; left: 16px; bottom: 16px; font-size: 13px; color: #1d9bf0; text-decoration: underline; cursor: pointer; }
+    .mxr-link { font-size: 14px; padding: 6px 12px; color: #1d9bf0; text-decoration: underline; cursor: pointer; }
   `;
   document.head.appendChild(style);
 }
