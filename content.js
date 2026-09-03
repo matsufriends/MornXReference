@@ -107,34 +107,70 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// 前回の一覧を保存しておき、次回は先に表示してから差分だけ走査する
+const LIST_KEY = 'mornXReferenceList';
+let known = new Set();
+let newHrefs = [];
+let anchorTile = null;
+
+function loadList() {
+  return new Promise((resolve) => chrome.storage.local.get(LIST_KEY, (r) => resolve(r[LIST_KEY] || [])));
+}
+
+function saveList(list) {
+  chrome.storage.local.set({ [LIST_KEY]: list });
+}
+
+// 1 回分の走査。{ added, knownCount } を返す
 function collectNew() {
+  let added = 0;
+  let knownCount = 0;
   for (const article of document.querySelectorAll('article[data-testid="tweet"]')) {
     if (!hasMedia(article)) continue;
     const href = findPermalink(article);
-    if (!href || seen.has(href)) continue;
+    if (!href) continue;
+    if (known.has(href)) knownCount++;
+    if (seen.has(href)) continue;
     seen.add(href);
-    fetchOne(href);
+    newHrefs.push(href);
+    added++;
+    fetchOne(href, true);
   }
   updateProgress();
+  return { added, knownCount };
 }
 
-function fetchOne(href) {
+function fetchOne(href, isNew) {
   chrome.runtime.sendMessage({ type: 'fetchTweet', url: href }, (res) => {
     fetchedCount++;
-    addTile(href, res);
+    addTile(href, res, isNew);
     updateProgress();
   });
 }
 
-async function startCollection() {
+async function startCollection(full = false) {
   if (started) return;
   started = true;
   openOverlay();
 
+  const saved = full ? [] : await loadList();
+  known = new Set(saved);
+  newHrefs = [];
+  for (const href of saved) {
+    seen.add(href);
+    fetchOne(href, false);
+  }
+
   let stableCount = 0;
   let lastHeight = -1;
+  let quietPasses = 0;
   for (let i = 0; i < 300 && overlayEl; i++) {
-    collectNew();
+    const { added, knownCount } = collectNew();
+    // ブックマークは新しい順なので、既知のポストだけのページが続いたら差分走査は終わり
+    if (known.size > 0) {
+      quietPasses = added === 0 && knownCount >= 3 ? quietPasses + 1 : 0;
+      if (quietPasses >= 2) break;
+    }
     window.scrollTo(0, document.scrollingElement.scrollHeight);
     await sleep(1500);
 
@@ -148,6 +184,8 @@ async function startCollection() {
     }
   }
   collectNew();
+  if (overlayEl) saveList([...newHrefs, ...saved.filter((h) => !newHrefs.includes(h))]);
+  updateProgress(true);
 }
 
 // --- overlay --------------------------------------------------------------
@@ -179,7 +217,8 @@ function injectStyle() {
     .mxr-tile-size { cursor: pointer; }
     .mxr-sound { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; cursor: pointer; white-space: nowrap; }
     .mxr-sound-check { padding: 0; border: 0; background: none; cursor: pointer; }
-    .mxr-progress { font-size: 13px; opacity: .7; margin-left: auto; }
+    .mxr-progress { font-size: 13px; opacity: .7; margin-left: auto; white-space: nowrap; }
+    .mxr-reload { cursor: pointer; font-size: 12px; background: var(--mxr-soft); border: 1px solid var(--mxr-line); border-radius: 6px; padding: 5px 10px; white-space: nowrap; }
     .mxr-grid { flex: 1; overflow: auto; padding: 4px; display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--mxr-tile, 220px), 1fr)); gap: 4px; align-content: start; }
     .mxr-tile { display: block; }
     .mxr-media { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: contain; background: var(--mxr-soft); cursor: zoom-in; }
@@ -222,12 +261,18 @@ function openOverlay() {
       <span class="mxr-tilde">〜</span>
       <input class="mxr-to" type="date" title="この日まで" />
       <span class="mxr-progress"></span>
+      <button class="mxr-reload" type="button" title="保存した一覧を捨てて最初から読み直す">全件読み直し</button>
     </div>
     <div class="mxr-grid"></div>
   `;
   document.body.appendChild(overlay);
   overlay.querySelector('.mxr-grid').style.setProperty('--mxr-tile', `${settings.tile}px`);
   overlay.querySelector('.mxr-close').addEventListener('click', closeOverlay);
+  overlay.querySelector('.mxr-reload').addEventListener('click', () => {
+    closeOverlay();
+    location.hash = '#mornxref';
+    startCollection(true);
+  });
   overlay.querySelector('.mxr-tile-size').addEventListener('input', (e) => {
     settings.tile = Number(e.target.value);
     overlay.querySelector('.mxr-grid').style.setProperty('--mxr-tile', `${settings.tile}px`);
@@ -277,6 +322,8 @@ function closeOverlay() {
   started = false;
   seen.clear();
   fetchedCount = 0;
+  anchorTile = null;
+  viewportObserver.disconnect();
   placeGalleryButton();
   history.replaceState(null, '', location.pathname + location.search);
 }
@@ -324,10 +371,18 @@ function openLightbox(media, href, res) {
   overlayEl.appendChild(box);
 }
 
-function updateProgress() {
+function updateProgress(done = false) {
   if (!overlayEl) return;
-  overlayEl.querySelector('.mxr-progress').textContent = `収集 ${seen.size} / 取得 ${fetchedCount}`;
+  overlayEl.querySelector('.mxr-progress').textContent = `${done ? '' : '読み込み中 '}${seen.size} 件`;
 }
+
+// 画面外の動画は止めて、件数が多くても軽くする
+const viewportObserver = new IntersectionObserver((entries) => {
+  for (const e of entries) {
+    if (e.isIntersecting) e.target.play().catch(() => {});
+    else e.target.pause();
+  }
+});
 
 // ポスト ID (Snowflake) から投稿日 (ローカル日付 YYYY-MM-DD) を得る。API 応答に依存しない。
 function tweetDate(href) {
@@ -345,7 +400,7 @@ function postInfo(res, date) {
   return [author, date.replace(/-/g, '/')].filter(Boolean).join(' ');
 }
 
-function addTile(href, res) {
+function addTile(href, res, isNew) {
   if (!overlayEl || !res || res.error || !res.media) return;
   const grid = overlayEl.querySelector('.mxr-grid');
   const text = `${res.author || ''} ${res.text || ''}`.toLowerCase();
@@ -380,7 +435,10 @@ function addTile(href, res) {
     info.className = 'mxr-tile-info';
     info.textContent = postInfo(res, date);
     tile.appendChild(info);
-    grid.appendChild(tile);
+    if (isNew && anchorTile) grid.insertBefore(tile, anchorTile);
+    else grid.appendChild(tile);
+    if (!isNew && !anchorTile) anchorTile = tile;
+    if (media.kind === 'video') viewportObserver.observe(el);
   }
   applyFilter();
 }
