@@ -12,8 +12,12 @@ let fetchedCount = 0;
 
 // --- sidebar item -----------------------------------------------------
 
+// X のサイドバーは設定次第でブックマーク項目が無いので、候補を順に探す。
+const ROW_CANDIDATES = ['/i/bookmarks', '/i/history', '/explore', '/home'];
+const GRID_ICON_PATH = 'M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z';
+
 function findSidebarRow(nav) {
-  const link = nav.querySelector('a[href="/i/bookmarks"]');
+  const link = ROW_CANDIDATES.map((h) => nav.querySelector(`a[href="${h}"]`)).find(Boolean);
   if (!link) return null;
   let node = link;
   while (node.parentElement && node.parentElement !== nav) {
@@ -37,6 +41,8 @@ function ensureGalleryItem() {
   for (const span of clone.querySelectorAll('span')) {
     if (span.textContent.trim()) span.textContent = GALLERY_LABEL;
   }
+  const svg = clone.querySelector('svg');
+  if (svg) svg.innerHTML = `<g><path d="${GRID_ICON_PATH}"></path></g>`;
   link.addEventListener('click', onGalleryClick);
   row.after(clone);
 }
