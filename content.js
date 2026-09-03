@@ -156,7 +156,7 @@ function injectStyle() {
     .mxr-overlay input[type="search"] { width: 240px; }
     .mxr-overlay input[type="date"] { color-scheme: light dark; }
     .mxr-tilde { font-size: 13px; opacity: .7; }
-    .mxr-lightbox { position: fixed; inset: 0; z-index: 2147483647; background: color-mix(in srgb, var(--mxr-bg) 92%, transparent); display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+    .mxr-lightbox { position: absolute; inset: 0; z-index: 2147483647; background: color-mix(in srgb, var(--mxr-bg) 92%, transparent); display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
     .mxr-lightbox video, .mxr-lightbox img { max-width: 96vw; max-height: 96vh; display: block; object-fit: contain; cursor: default; }
     .mxr-kinds { display: inline-flex; border: 1px solid var(--mxr-line); border-radius: 6px; overflow: hidden; }
     .mxr-kind { cursor: pointer; font-size: 13px; background: var(--mxr-soft); padding: 6px 12px; }
