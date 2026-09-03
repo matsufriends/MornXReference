@@ -239,17 +239,17 @@ function openOverlay() {
   injectStyle();
   const overlay = document.createElement('div');
   overlay.className = 'mxr-overlay';
-  // X のカラーテーマ (白 / ダークブルー / 黒) をそのまま引き継ぐ
-  const bodyStyle = getComputedStyle(document.body);
-  overlay.style.setProperty('--mxr-bg', bodyStyle.backgroundColor);
-  overlay.style.setProperty('--mxr-fg', bodyStyle.color);
-  // 画面全体ではなく、サイドバー (header) の右側だけを覆う
-  const fitToSidebar = () => {
+  // X のカラーテーマ (白 / ダークブルー / 黒) をそのまま引き継ぎ、サイドバー (header) の右側だけを覆う。
+  // 読み込み直後は body の色や header が揃っていないことがあるので、再描画のたびに取り直す
+  overlay.refresh = () => {
+    const bodyStyle = getComputedStyle(document.body);
+    overlay.style.setProperty('--mxr-bg', bodyStyle.backgroundColor);
+    overlay.style.setProperty('--mxr-fg', bodyStyle.color);
     const header = document.querySelector('header[role="banner"]');
     overlay.style.setProperty('--mxr-left', `${header ? header.getBoundingClientRect().right : 0}px`);
   };
-  fitToSidebar();
-  window.addEventListener('resize', fitToSidebar);
+  overlay.refresh();
+  window.addEventListener('resize', () => overlay.refresh());
   overlay.innerHTML = `
     <div class="mxr-bar">
       <button class="mxr-close" type="button" aria-label="閉じる">&times;</button>
@@ -462,6 +462,7 @@ new MutationObserver(() => {
   ensureGalleryButton();
   placeGalleryButton();
   if (overlayEl && !overlayEl.isConnected) mountBelowLayers(overlayEl);
+  if (overlayEl) overlayEl.refresh();
   // X 内の画面遷移 (SPA) でブックマーク一覧を離れたらギャラリーも閉じる
   if (overlayEl && !BOOKMARK_PATHS.includes(location.pathname)) closeOverlay();
 }).observe(document.body, { childList: true, subtree: true });
@@ -471,5 +472,10 @@ window.addEventListener('popstate', () => {
 window.addEventListener('resize', placeGalleryButton);
 
 if (BOOKMARK_PATHS.includes(location.pathname) && location.hash === '#mornxref') {
-  startCollection();
+  // X の画面 (サイドバー) が出てから開く
+  const wait = setInterval(() => {
+    if (!document.querySelector('header[role="banner"]')) return;
+    clearInterval(wait);
+    startCollection();
+  }, 200);
 }
