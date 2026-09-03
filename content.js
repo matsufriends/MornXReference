@@ -158,7 +158,9 @@ function injectStyle() {
     .mxr-tile-size { cursor: pointer; }
     .mxr-progress { font-size: 13px; opacity: .7; margin-left: auto; }
     .mxr-grid { flex: 1; overflow: auto; padding: 4px; display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--mxr-tile, 220px), 1fr)); gap: 4px; align-content: start; }
-    .mxr-tile { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: contain; background: var(--mxr-soft); cursor: zoom-in; }
+    .mxr-tile { display: block; }
+    .mxr-media { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: contain; background: var(--mxr-soft); cursor: zoom-in; }
+    .mxr-tile-link { display: block; font-size: 12px; color: #1d9bf0; text-decoration: underline; cursor: pointer; padding: 2px 4px 4px; }
     .mxr-link { position: fixed; left: 16px; bottom: 16px; font-size: 13px; color: #1d9bf0; text-decoration: underline; cursor: pointer; }
   `;
   document.head.appendChild(style);
@@ -301,11 +303,13 @@ function addTile(href, res) {
   const text = `${res.author || ''} ${res.text || ''}`.toLowerCase();
   const date = tweetDate(href);
   for (const media of res.media) {
+    const tile = document.createElement('div');
+    tile.className = 'mxr-tile';
+    tile.dataset.kind = media.kind === 'video' ? 'video' : 'image';
+    tile.dataset.text = text;
+    tile.dataset.date = date;
     const el = document.createElement(media.kind === 'video' ? 'video' : 'img');
-    el.className = 'mxr-tile';
-    el.dataset.kind = media.kind === 'video' ? 'video' : 'image';
-    el.dataset.text = text;
-    el.dataset.date = date;
+    el.className = 'mxr-media';
     el.src = media.src;
     if (media.kind === 'video') {
       el.autoplay = true;
@@ -316,7 +320,15 @@ function addTile(href, res) {
       if (media.poster) el.poster = media.poster;
     }
     el.addEventListener('click', () => openLightbox(media, href));
-    grid.appendChild(el);
+    tile.appendChild(el);
+    const link = document.createElement('a');
+    link.className = 'mxr-tile-link';
+    link.href = href;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = '元ポスト';
+    tile.appendChild(link);
+    grid.appendChild(tile);
   }
   applyFilter();
 }
