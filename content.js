@@ -184,7 +184,7 @@ function openOverlay() {
   overlay.innerHTML = `
     <div class="mxr-bar">
       <button class="mxr-close" type="button" aria-label="閉じる">&times;</button>
-      <input class="mxr-tile-size" type="range" min="120" max="480" value="220" />
+      <input class="mxr-tile-size" type="range" min="60" max="480" value="220" />
       <span class="mxr-kinds">
         <button class="mxr-kind mxr-kind-on" type="button" data-kind="">全部</button>
         <button class="mxr-kind" type="button" data-kind="image">画像</button>
