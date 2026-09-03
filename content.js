@@ -1,6 +1,6 @@
-// Injects a "ギャラリー" sidebar item next to X's own Bookmarks item. Clicking it
-// starts collecting media from the bookmarks list and shows it in a full-screen
-// in-page overlay (no dedicated tab/page).
+// Adds a "ギャラリー" button next to X's logo (top-left). Clicking it starts
+// collecting media from the bookmarks list and shows it in an in-page overlay
+// covering the area right of the sidebar (no dedicated tab/page).
 
 const STYLE_ID = 'mxr-style';
 const GALLERY_LABEL = 'ギャラリー';
@@ -13,76 +13,35 @@ let started = false;
 const seen = new Set();
 let fetchedCount = 0;
 
-// --- sidebar item -----------------------------------------------------
+// --- gallery button ----------------------------------------------------
+// サイドバー項目の複製は X の再描画や選択状態のたびにズレるので、左上の X ロゴの右隣に
+// 自前の固定ボタンを置く (ロゴの位置だけ参照し、X の DOM には触らない)。
 
-// X のサイドバーは設定次第でブックマーク項目が無いので、候補を順に探す。
-const ROW_CANDIDATES = ['/i/bookmarks', '/i/history', '/explore', '/home'];
 const GRID_ICON_PATH = 'M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z';
+let buttonEl = null;
 
-function isActiveRow(link) {
-  const span = [...link.querySelectorAll('span')].find((el) => el.textContent.trim());
-  return !!span && Number(getComputedStyle(span).fontWeight) >= 600;
+function ensureGalleryButton() {
+  if (buttonEl && document.body.contains(buttonEl)) return;
+  injectStyle();
+  buttonEl = document.createElement('button');
+  buttonEl.type = 'button';
+  buttonEl.className = 'mxr-button';
+  buttonEl.title = GALLERY_LABEL;
+  buttonEl.setAttribute('aria-label', GALLERY_LABEL);
+  buttonEl.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="${GRID_ICON_PATH}"/></svg>`;
+  buttonEl.addEventListener('click', onGalleryClick);
+  document.body.appendChild(buttonEl);
+  placeGalleryButton();
 }
 
-function rowOf(nav, link) {
-  let node = link;
-  while (node.parentElement && node.parentElement !== nav) {
-    node = node.parentElement;
-  }
-  return node.parentElement === nav ? node : link;
-}
-
-// 挿入位置は常に先頭候補 (ブックマーク/履歴) の直後で固定。複製元だけ非選択の項目から選ぶ。
-function findSidebarRows(nav) {
-  const links = ROW_CANDIDATES.map((h) => nav.querySelector(`a[href="${h}"]`)).filter(Boolean);
-  if (links.length === 0) return null;
-  // 現在地の項目 (太字) を複製すると「ギャラリー」が常に選択中の見た目になるので避ける
-  const source = links.find((l) => !isActiveRow(l)) || links[0];
-  return { anchor: rowOf(nav, links[0]), source: rowOf(nav, source) };
-}
-
-// ギャラリー表示中は「ギャラリー」を選択中の見た目にし、X が選択中にする履歴/ブックマークを通常に戻す
-// (塗りつぶしアイコンは同じ形のまま線画にする)
-const OUTLINE_STYLE = 'fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round';
-
-function labelSpan(row) {
-  return [...row.querySelectorAll('span')].find((el) => el.textContent.trim());
-}
-
-function setSidebarActive(open) {
-  const nav = document.querySelector('nav[role="navigation"]');
-  if (!nav) return;
-  const gallery = nav.querySelector('[data-mornxref]');
-  const anchorLink = ROW_CANDIDATES.slice(0, 2).map((h) => nav.querySelector(`a[href="${h}"]`)).find(Boolean);
-  const gSpan = gallery && labelSpan(gallery);
-  if (gSpan) gSpan.style.fontWeight = open ? '700' : '';
-  if (!anchorLink) return;
-  const aSpan = labelSpan(anchorLink);
-  if (aSpan) aSpan.style.setProperty('font-weight', open ? '400' : '', open ? 'important' : '');
-  const path = anchorLink.querySelector('svg path');
-  if (path) path.style.cssText = open ? OUTLINE_STYLE : '';
-}
-
-function ensureGalleryItem() {
-  const nav = document.querySelector('nav[role="navigation"]');
-  if (!nav || nav.querySelector('[data-mornxref]')) return;
-  const rows = findSidebarRows(nav);
-  if (!rows) return;
-
-  const clone = rows.source.cloneNode(true);
-  clone.dataset.mornxref = '1';
-  const link = clone.matches('a') ? clone : clone.querySelector('a');
-  if (!link) return;
-  link.setAttribute('href', BOOKMARK_URL);
-  link.setAttribute('aria-label', GALLERY_LABEL);
-  link.removeAttribute('aria-current');
-  for (const span of clone.querySelectorAll('span')) {
-    if (span.textContent.trim()) span.textContent = GALLERY_LABEL;
-  }
-  const svg = clone.querySelector('svg');
-  if (svg) svg.innerHTML = `<g><path d="${GRID_ICON_PATH}"></path></g>`;
-  link.addEventListener('click', onGalleryClick);
-  rows.anchor.after(clone);
+function placeGalleryButton() {
+  if (!buttonEl) return;
+  const logo = document.querySelector('header[role="banner"] a[href="/home"]');
+  const r = logo ? logo.getBoundingClientRect() : null;
+  buttonEl.style.left = `${r ? r.right + 8 : 8}px`;
+  buttonEl.style.top = `${r ? r.top + (r.height - 40) / 2 : 8}px`;
+  buttonEl.style.color = getComputedStyle(document.body).color;
+  buttonEl.classList.toggle('mxr-button-on', !!overlayEl);
 }
 
 function onGalleryClick(e) {
@@ -177,6 +136,9 @@ function injectStyle() {
     .mxr-overlay input[type="range"] { padding: 0; border: 0; background: none; width: 140px; }
     .mxr-overlay input[type="search"] { width: 240px; }
     .mxr-overlay input[type="date"] { color-scheme: light dark; }
+    .mxr-button { all: initial; position: fixed; z-index: 2147483646; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-sizing: border-box; }
+    .mxr-button:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+    .mxr-button-on { background: color-mix(in srgb, currentColor 15%, transparent); }
     .mxr-tilde { font-size: 13px; opacity: .7; }
     .mxr-lightbox { position: absolute; inset: 0; z-index: 2147483647; background: color-mix(in srgb, var(--mxr-bg) 92%, transparent); display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
     .mxr-lightbox video, .mxr-lightbox img { max-width: 96vw; max-height: 96vh; display: block; object-fit: contain; cursor: default; }
@@ -242,7 +204,7 @@ function openOverlay() {
     overlay.querySelector(sel).addEventListener('input', applyFilter);
   }
   overlayEl = overlay;
-  setSidebarActive(true);
+  placeGalleryButton();
   updateProgress();
 }
 
@@ -267,7 +229,7 @@ function closeOverlay() {
   if (!overlayEl) return;
   overlayEl.remove();
   overlayEl = null;
-  setSidebarActive(false);
+  placeGalleryButton();
   history.replaceState(null, '', location.pathname + location.search);
 }
 
@@ -351,11 +313,12 @@ function addTile(href, res) {
 
 // --- boot -----------------------------------------------------------------
 
-ensureGalleryItem();
+ensureGalleryButton();
 new MutationObserver(() => {
-  ensureGalleryItem();
-  if (overlayEl) setSidebarActive(true);
+  ensureGalleryButton();
+  placeGalleryButton();
 }).observe(document.body, { childList: true, subtree: true });
+window.addEventListener('resize', placeGalleryButton);
 
 if (BOOKMARK_PATHS.includes(location.pathname) && location.hash === '#mornxref') {
   startCollection();
