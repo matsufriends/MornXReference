@@ -255,7 +255,7 @@ function openLightbox(media, href) {
   };
   box.addEventListener('click', close);
   document.addEventListener('keydown', onKey);
-  document.body.appendChild(box);
+  overlayEl.appendChild(box);
 }
 
 function updateProgress() {
