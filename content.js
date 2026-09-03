@@ -144,23 +144,24 @@ function injectStyle() {
   const style = document.createElement('style');
   style.id = STYLE_ID;
   style.textContent = `
-    .mxr-overlay, .mxr-overlay *:not(input):not(select) { all: initial; box-sizing: border-box; font-family: system-ui, sans-serif; }
-    .mxr-overlay input { font: 13px system-ui, sans-serif; color: #fff; background: #222; border: 1px solid #555; border-radius: 6px; padding: 5px 8px; }
+    .mxr-overlay, .mxr-overlay :where(*:not(input)) { all: initial; box-sizing: border-box; font-family: system-ui, sans-serif; color: var(--mxr-fg); }
+    .mxr-overlay { --mxr-line: color-mix(in srgb, var(--mxr-fg) 30%, transparent); --mxr-soft: color-mix(in srgb, var(--mxr-fg) 8%, transparent); }
+    .mxr-overlay input { font: 13px system-ui, sans-serif; color: var(--mxr-fg); background: var(--mxr-soft); border: 1px solid var(--mxr-line); border-radius: 6px; padding: 5px 8px; }
     .mxr-overlay input[type="range"] { padding: 0; border: 0; background: none; width: 140px; }
     .mxr-overlay input[type="search"] { width: 240px; }
-    .mxr-lightbox { position: fixed; inset: 0; z-index: 2147483647; background: rgba(0,0,0,.92); display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+    .mxr-lightbox { position: fixed; inset: 0; z-index: 2147483647; background: color-mix(in srgb, var(--mxr-bg) 92%, transparent); display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
     .mxr-lightbox video, .mxr-lightbox img { max-width: 96vw; max-height: 96vh; display: block; object-fit: contain; cursor: default; }
-    .mxr-kinds { display: inline-flex; border: 1px solid #555; border-radius: 6px; overflow: hidden; }
-    .mxr-kind { cursor: pointer; font-size: 13px; color: #ccc; background: #222; padding: 6px 12px; }
-    .mxr-kind-on { color: #000; background: #fff; }
-    .mxr-overlay { position: fixed; inset: 0; z-index: 2147483647; background: #000; color: #fff; display: flex; flex-direction: column; }
+    .mxr-kinds { display: inline-flex; border: 1px solid var(--mxr-line); border-radius: 6px; overflow: hidden; }
+    .mxr-kind { cursor: pointer; font-size: 13px; background: var(--mxr-soft); padding: 6px 12px; }
+    .mxr-kind-on { color: var(--mxr-bg); background: var(--mxr-fg); }
+    .mxr-overlay { position: fixed; inset: 0; z-index: 2147483647; background: var(--mxr-bg); color: var(--mxr-fg); display: flex; flex-direction: column; }
     .mxr-bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; flex: none; }
-    .mxr-close { cursor: pointer; font-size: 18px; line-height: 1; color: #fff; background: #222; border: 1px solid #555; border-radius: 6px; padding: 6px 12px; }
+    .mxr-close { cursor: pointer; font-size: 18px; line-height: 1; background: var(--mxr-soft); border: 1px solid var(--mxr-line); border-radius: 6px; padding: 6px 12px; }
     .mxr-tile-size { cursor: pointer; }
-    .mxr-progress { font-size: 13px; color: #ccc; margin-left: auto; }
+    .mxr-progress { font-size: 13px; opacity: .7; margin-left: auto; }
     .mxr-grid { flex: 1; overflow: auto; padding: 4px; display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--mxr-tile, 220px), 1fr)); gap: 4px; align-content: start; }
-    .mxr-tile { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: contain; background: #111; cursor: zoom-in; }
-    .mxr-link { position: fixed; left: 16px; bottom: 16px; font-size: 13px; color: #4ea1ff; text-decoration: underline; cursor: pointer; }
+    .mxr-tile { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: contain; background: var(--mxr-soft); cursor: zoom-in; }
+    .mxr-link { position: fixed; left: 16px; bottom: 16px; font-size: 13px; color: #1d9bf0; text-decoration: underline; cursor: pointer; }
   `;
   document.head.appendChild(style);
 }
@@ -169,6 +170,10 @@ function openOverlay() {
   injectStyle();
   const overlay = document.createElement('div');
   overlay.className = 'mxr-overlay';
+  // X のカラーテーマ (白 / ダークブルー / 黒) をそのまま引き継ぐ
+  const bodyStyle = getComputedStyle(document.body);
+  overlay.style.setProperty('--mxr-bg', bodyStyle.backgroundColor);
+  overlay.style.setProperty('--mxr-fg', bodyStyle.color);
   overlay.innerHTML = `
     <div class="mxr-bar">
       <button class="mxr-close" type="button" aria-label="閉じる">&times;</button>
