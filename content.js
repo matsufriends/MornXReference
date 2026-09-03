@@ -186,7 +186,7 @@ function openOverlay() {
   document.body.appendChild(overlay);
   overlay.querySelector('.mxr-close').addEventListener('click', closeOverlay);
   overlay.querySelector('.mxr-tile-size').addEventListener('input', (e) => {
-    overlay.style.setProperty('--mxr-tile', `${e.target.value}px`);
+    overlay.querySelector('.mxr-grid').style.setProperty('--mxr-tile', `${e.target.value}px`);
   });
   for (const btn of overlay.querySelectorAll('.mxr-kind')) {
     btn.addEventListener('click', () => {
