@@ -41,6 +41,35 @@ function findSidebarRows(nav) {
   return { anchor: rowOf(nav, links[0]), source: rowOf(nav, source) };
 }
 
+// ギャラリー表示中は「ギャラリー」を選択中の見た目にし、X が選択中にする履歴/ブックマークを通常に戻す
+const BOOKMARK_ICON_OUTLINE = 'M3 4.5C3 3.12 4.12 2 5.5 2h13C19.88 2 21 3.12 21 4.5v18.44l-9-6.28-9 6.28V4.5zM5.5 4c-.28 0-.5.22-.5.5v14.62l7-4.89 7 4.89V4.5c0-.28-.22-.5-.5-.5h-13z';
+
+function labelSpan(row) {
+  return [...row.querySelectorAll('span')].find((el) => el.textContent.trim());
+}
+
+function setSidebarActive(open) {
+  const nav = document.querySelector('nav[role="navigation"]');
+  if (!nav) return;
+  const gallery = nav.querySelector('[data-mornxref]');
+  const anchorLink = ROW_CANDIDATES.slice(0, 2).map((h) => nav.querySelector(`a[href="${h}"]`)).find(Boolean);
+  const gSpan = gallery && labelSpan(gallery);
+  if (gSpan) gSpan.style.fontWeight = open ? '700' : '';
+  if (!anchorLink) return;
+  const aSpan = labelSpan(anchorLink);
+  if (aSpan) aSpan.style.setProperty('font-weight', open ? '400' : '', open ? 'important' : '');
+  const path = anchorLink.querySelector('svg path');
+  if (path) {
+    if (open && !path.dataset.mxrOrig) {
+      path.dataset.mxrOrig = path.getAttribute('d');
+      path.setAttribute('d', BOOKMARK_ICON_OUTLINE);
+    } else if (!open && path.dataset.mxrOrig) {
+      path.setAttribute('d', path.dataset.mxrOrig);
+      delete path.dataset.mxrOrig;
+    }
+  }
+}
+
 function ensureGalleryItem() {
   const nav = document.querySelector('nav[role="navigation"]');
   if (!nav || nav.querySelector('[data-mornxref]')) return;
@@ -220,6 +249,7 @@ function openOverlay() {
     overlay.querySelector(sel).addEventListener('input', applyFilter);
   }
   overlayEl = overlay;
+  setSidebarActive(true);
   updateProgress();
 }
 
@@ -244,6 +274,7 @@ function closeOverlay() {
   if (!overlayEl) return;
   overlayEl.remove();
   overlayEl = null;
+  setSidebarActive(false);
   history.replaceState(null, '', location.pathname + location.search);
 }
 
@@ -328,7 +359,10 @@ function addTile(href, res) {
 // --- boot -----------------------------------------------------------------
 
 ensureGalleryItem();
-new MutationObserver(ensureGalleryItem).observe(document.body, { childList: true, subtree: true });
+new MutationObserver(() => {
+  ensureGalleryItem();
+  if (overlayEl) setSidebarActive(true);
+}).observe(document.body, { childList: true, subtree: true });
 
 if (BOOKMARK_PATHS.includes(location.pathname) && location.hash === '#mornxref') {
   startCollection();
