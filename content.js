@@ -34,19 +34,33 @@ function ensureGalleryButton() {
   placeGalleryButton();
 }
 
-// 「ポストする」ボタンの直下に、同じ幅で置く (サイドバーが細い時は丸いアイコンだけになる)
+// 「ポストする」ボタンの直下に同じ幅で置く (サイドバーが細い時は丸いアイコンだけになる)。
+// 縦幅が狭くて下のアカウント表示と重なる場合は、左上のロゴの右隣へ逃がす。
 function placeGalleryButton() {
   if (!buttonEl) return;
-  const post = document.querySelector('header[role="banner"] a[data-testid="SideNav_NewTweet_Button"]');
-  const logo = document.querySelector('header[role="banner"] h1 a[href="/home"]');
-  const r = (post || logo)?.getBoundingClientRect();
-  const wide = !!r && r.width > 80;
-  buttonEl.style.left = `${r ? r.left : 8}px`;
-  buttonEl.style.top = `${r ? r.bottom + 8 : 8}px`;
-  buttonEl.style.width = `${r ? r.width : 40}px`;
-  buttonEl.style.height = `${r ? Math.min(r.height, 52) : 40}px`;
+  const header = 'header[role="banner"] ';
+  const post = document.querySelector(`${header}a[data-testid="SideNav_NewTweet_Button"]`);
+  const account = document.querySelector(`${header}[data-testid="SideNav_AccountSwitcher_Button"]`);
+  const logo = document.querySelector(`${header}h1 a[href="/home"]`);
+  let rect = null;
+  if (post) {
+    const r = post.getBoundingClientRect();
+    const height = Math.min(r.height, 52);
+    rect = { left: r.left, top: r.bottom + 8, width: r.width, height };
+    const a = account && account.getBoundingClientRect();
+    if (a && a.height > 0 && rect.top + height > a.top - 8) rect = null;
+  }
+  if (!rect && logo) {
+    const r = logo.getBoundingClientRect();
+    rect = { left: r.right + 8, top: r.top + (r.height - 40) / 2, width: 40, height: 40 };
+  }
+  if (!rect) rect = { left: 8, top: 8, width: 40, height: 40 };
+  buttonEl.style.left = `${rect.left}px`;
+  buttonEl.style.top = `${rect.top}px`;
+  buttonEl.style.width = `${rect.width}px`;
+  buttonEl.style.height = `${rect.height}px`;
   buttonEl.style.color = getComputedStyle(document.body).color;
-  buttonEl.querySelector('.mxr-button-label').style.display = wide ? '' : 'none';
+  buttonEl.querySelector('.mxr-button-label').style.display = rect.width > 80 ? '' : 'none';
   buttonEl.classList.toggle('mxr-button-on', !!overlayEl);
 }
 
