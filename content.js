@@ -27,8 +27,16 @@ let fetchedCount = 0;
 const GRID_ICON_PATH = 'M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z';
 let buttonEl = null;
 
+// X のモーダル層 (#layers) の直前に置くと、ログイン等のポップアップより後ろに回る。
+// #layers と同じ z-index 1 で DOM 順が先なので、本文より前・ポップアップより後ろになる
+function mountBelowLayers(el) {
+  const layers = document.getElementById('layers');
+  if (layers) layers.parentElement.insertBefore(el, layers);
+  else document.body.appendChild(el);
+}
+
 function ensureGalleryButton() {
-  if (buttonEl && document.body.contains(buttonEl)) return;
+  if (buttonEl && buttonEl.isConnected) return;
   injectStyle();
   buttonEl = document.createElement('button');
   buttonEl.type = 'button';
@@ -37,7 +45,7 @@ function ensureGalleryButton() {
   buttonEl.setAttribute('aria-label', GALLERY_LABEL);
   buttonEl.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="${GRID_ICON_PATH}"/></svg><span class="mxr-button-label">${GALLERY_LABEL}</span>`;
   buttonEl.addEventListener('click', onGalleryClick);
-  document.body.appendChild(buttonEl);
+  mountBelowLayers(buttonEl);
   placeGalleryButton();
 }
 
@@ -201,17 +209,17 @@ function injectStyle() {
     .mxr-overlay input[type="range"] { padding: 0; border: 0; background: none; width: 140px; }
     .mxr-overlay input[type="search"] { width: 240px; }
     .mxr-overlay input[type="date"] { color-scheme: light dark; }
-    .mxr-button { all: initial; position: fixed; z-index: 2147483646; border-radius: 9999px; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-sizing: border-box; font: 700 17px system-ui, sans-serif; }
+    .mxr-button { all: initial; position: fixed; z-index: 1; border-radius: 9999px; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-sizing: border-box; font: 700 17px system-ui, sans-serif; }
     .mxr-button-label { color: inherit; }
     .mxr-button:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
     .mxr-button-on { background: color-mix(in srgb, currentColor 15%, transparent); }
     .mxr-tilde { font-size: 13px; opacity: .7; }
-    .mxr-lightbox { position: absolute; inset: 0; z-index: 2147483647; background: color-mix(in srgb, var(--mxr-bg) 92%, transparent); display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center; cursor: zoom-out; }
+    .mxr-lightbox { position: absolute; inset: 0; z-index: 1; background: color-mix(in srgb, var(--mxr-bg) 92%, transparent); display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center; cursor: zoom-out; }
     .mxr-lightbox video, .mxr-lightbox img { max-width: 96%; max-height: calc(100% - 60px); display: block; object-fit: contain; cursor: default; }
     .mxr-kinds { display: inline-flex; border: 1px solid var(--mxr-line); border-radius: 6px; overflow: hidden; }
     .mxr-kind { cursor: pointer; font-size: 13px; background: var(--mxr-soft); padding: 6px 12px; }
     .mxr-kind-on { color: var(--mxr-bg); background: var(--mxr-fg); }
-    .mxr-overlay { position: fixed; top: 0; right: 0; bottom: 0; left: var(--mxr-left, 0); z-index: 2147483647; background: var(--mxr-bg); color: var(--mxr-fg); display: flex; flex-direction: column; }
+    .mxr-overlay { position: fixed; top: 0; right: 0; bottom: 0; left: var(--mxr-left, 0); z-index: 1; background: var(--mxr-bg); color: var(--mxr-fg); display: flex; flex-direction: column; }
     .mxr-bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; flex: none; }
     .mxr-close { cursor: pointer; font-size: 18px; line-height: 1; background: var(--mxr-soft); border: 1px solid var(--mxr-line); border-radius: 6px; padding: 6px 12px; }
     .mxr-tile-size { cursor: pointer; }
@@ -265,7 +273,7 @@ function openOverlay() {
     </div>
     <div class="mxr-grid"></div>
   `;
-  document.body.appendChild(overlay);
+  mountBelowLayers(overlay);
   overlay.querySelector('.mxr-grid').style.setProperty('--mxr-tile', `${settings.tile}px`);
   overlay.querySelector('.mxr-close').addEventListener('click', closeOverlay);
   overlay.querySelector('.mxr-reload').addEventListener('click', () => {
@@ -449,6 +457,7 @@ ensureGalleryButton();
 new MutationObserver(() => {
   ensureGalleryButton();
   placeGalleryButton();
+  if (overlayEl && !overlayEl.isConnected) mountBelowLayers(overlayEl);
   // X 内の画面遷移 (SPA) でブックマーク一覧を離れたらギャラリーも閉じる
   if (overlayEl && !BOOKMARK_PATHS.includes(location.pathname)) closeOverlay();
 }).observe(document.body, { childList: true, subtree: true });
