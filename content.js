@@ -42,7 +42,8 @@ function findSidebarRows(nav) {
 }
 
 // ギャラリー表示中は「ギャラリー」を選択中の見た目にし、X が選択中にする履歴/ブックマークを通常に戻す
-const BOOKMARK_ICON_OUTLINE = 'M3 4.5C3 3.12 4.12 2 5.5 2h13C19.88 2 21 3.12 21 4.5v18.44l-9-6.28-9 6.28V4.5zM5.5 4c-.28 0-.5.22-.5.5v14.62l7-4.89 7 4.89V4.5c0-.28-.22-.5-.5-.5h-13z';
+// (塗りつぶしアイコンは同じ形のまま線画にする)
+const OUTLINE_STYLE = 'fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round';
 
 function labelSpan(row) {
   return [...row.querySelectorAll('span')].find((el) => el.textContent.trim());
@@ -59,15 +60,7 @@ function setSidebarActive(open) {
   const aSpan = labelSpan(anchorLink);
   if (aSpan) aSpan.style.setProperty('font-weight', open ? '400' : '', open ? 'important' : '');
   const path = anchorLink.querySelector('svg path');
-  if (path) {
-    if (open && !path.dataset.mxrOrig) {
-      path.dataset.mxrOrig = path.getAttribute('d');
-      path.setAttribute('d', BOOKMARK_ICON_OUTLINE);
-    } else if (!open && path.dataset.mxrOrig) {
-      path.setAttribute('d', path.dataset.mxrOrig);
-      delete path.dataset.mxrOrig;
-    }
-  }
+  if (path) path.style.cssText = open ? OUTLINE_STYLE : '';
 }
 
 function ensureGalleryItem() {
