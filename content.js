@@ -28,21 +28,25 @@ function ensureGalleryButton() {
   buttonEl.className = 'mxr-button';
   buttonEl.title = GALLERY_LABEL;
   buttonEl.setAttribute('aria-label', GALLERY_LABEL);
-  buttonEl.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="${GRID_ICON_PATH}"/></svg>`;
+  buttonEl.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="${GRID_ICON_PATH}"/></svg><span class="mxr-button-label">${GALLERY_LABEL}</span>`;
   buttonEl.addEventListener('click', onGalleryClick);
   document.body.appendChild(buttonEl);
   placeGalleryButton();
 }
 
+// 「ポストする」ボタンの直下に、同じ幅で置く (サイドバーが細い時は丸いアイコンだけになる)
 function placeGalleryButton() {
   if (!buttonEl) return;
-  const logo =
-    document.querySelector('header[role="banner"] h1 a[href="/home"]') ||
-    document.querySelector('header[role="banner"] a[href="/home"]');
-  const r = logo ? logo.getBoundingClientRect() : null;
-  buttonEl.style.left = `${r ? r.right + 8 : 8}px`;
-  buttonEl.style.top = `${r ? r.top + (r.height - 40) / 2 : 8}px`;
+  const post = document.querySelector('header[role="banner"] a[data-testid="SideNav_NewTweet_Button"]');
+  const logo = document.querySelector('header[role="banner"] h1 a[href="/home"]');
+  const r = (post || logo)?.getBoundingClientRect();
+  const wide = !!r && r.width > 80;
+  buttonEl.style.left = `${r ? r.left : 8}px`;
+  buttonEl.style.top = `${r ? r.bottom + 8 : 8}px`;
+  buttonEl.style.width = `${r ? r.width : 40}px`;
+  buttonEl.style.height = `${r ? Math.min(r.height, 52) : 40}px`;
   buttonEl.style.color = getComputedStyle(document.body).color;
+  buttonEl.querySelector('.mxr-button-label').style.display = wide ? '' : 'none';
   buttonEl.classList.toggle('mxr-button-on', !!overlayEl);
 }
 
@@ -138,7 +142,8 @@ function injectStyle() {
     .mxr-overlay input[type="range"] { padding: 0; border: 0; background: none; width: 140px; }
     .mxr-overlay input[type="search"] { width: 240px; }
     .mxr-overlay input[type="date"] { color-scheme: light dark; }
-    .mxr-button { all: initial; position: fixed; z-index: 2147483646; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-sizing: border-box; }
+    .mxr-button { all: initial; position: fixed; z-index: 2147483646; border-radius: 9999px; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-sizing: border-box; font: 700 17px system-ui, sans-serif; }
+    .mxr-button-label { color: inherit; }
     .mxr-button:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
     .mxr-button-on { background: color-mix(in srgb, currentColor 15%, transparent); }
     .mxr-tilde { font-size: 13px; opacity: .7; }
