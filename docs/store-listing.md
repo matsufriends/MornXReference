@@ -3,7 +3,7 @@
 ## 手順 (ユーザー作業)
 
 1. https://chrome.google.com/webstore/devconsole を Google アカウントで開き、初回のみ開発者登録 (登録料 5 USD) を行う
-2. 「新しいアイテム」→ `MornXReference-<version>.zip` をアップロード (ZIP は `sh docs/package.sh` で作る)
+2. 「新しいアイテム」→ `docs/store/MornXReference-<version>.zip` をアップロード (ZIP は `sh docs/package.sh` で作る)
 3. 「ストアの掲載情報」に下記の文言と画像を入力
 4. 「プライバシーへの取り組み」に下記の目的説明を入力し、プライバシーポリシー URL を設定
 5. 「配布」で公開範囲を選び、審査に提出
@@ -30,7 +30,7 @@ Live2D の WIP など「動いているものを一覧で見比べたい」用�
 - カテゴリ: 生産性 (Productivity) など
 - 言語: 日本語
 - アイコン: `icons/icon128.png`
-- スクリーンショット: 1280x800 または 640x400 の PNG/JPEG を 1〜5 枚 (ギャラリーを開いた画面を撮る)
+- スクリーンショット: `docs/store/screenshot-1.png` (1280x800)。追加する場合も同じサイズで
 - プライバシーポリシー URL: https://github.com/matsufriends/MornXReference/blob/master/PRIVACY.md
 
 ## プライバシーへの取り組み (権限の目的説明)
