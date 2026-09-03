@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "MornXReference",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "X のブックマークの動画・画像をグリッドで眺める",
   "permissions": ["storage"],
   "host_permissions": [
