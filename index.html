@@ -7,15 +7,12 @@
 </head>
 <body>
   <header>
-    <form id="add-form">
-      <textarea id="urls" placeholder="X のツイートURLを1行1件で貼り付け" rows="4"></textarea>
-      <div class="controls">
-        <button type="submit">追加</button>
-        <label>タイル幅
-          <input type="range" id="tile-size" min="120" max="480" value="240" />
-        </label>
-      </div>
-    </form>
+    <div class="controls">
+      <button id="reload">ブックマークを再読み込み</button>
+      <label>タイル幅
+        <input type="range" id="tile-size" min="120" max="480" value="240" />
+      </label>
+    </div>
   </header>
   <main id="grid"></main>
   <script type="module" src="app.js"></script>

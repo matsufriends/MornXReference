@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { extractTweetId, buildToken, addUrls, pickVariant, extractTweetMedia } from './lib.js';
+import { extractTweetId, buildToken, canonicalizeStatusUrl, pickVariant, extractTweetMedia } from './lib.js';
 
 // extractTweetId
 assert.equal(extractTweetId('https://x.com/foo/status/1234567890123456789'), '1234567890123456789');
@@ -10,21 +10,14 @@ assert.equal(extractTweetId('https://example.com/video.mp4'), null);
 // buildToken matches react-tweet's formula
 assert.equal(buildToken('1234567890123456789'), ((Number('1234567890123456789') / 1e15) * Math.PI).toString(36).replace(/(0+|\.)/g, ''));
 
-// addUrls: dedupe across calls and within one paste
-{
-  const { items: step1 } = addUrls([], 'https://x.com/a/status/1\nhttps://x.com/a/status/1\n');
-  assert.equal(step1.length, 1);
-  const { items: step2, added } = addUrls(step1, 'https://x.com/a/status/1\nhttps://x.com/b/status/2');
-  assert.equal(step2.length, 2);
-  assert.equal(added.length, 1);
-  assert.equal(added[0].url, 'https://x.com/b/status/2');
-}
-
-// direct video url (no /status/) keeps the raw url and null tweetId
-{
-  const { items } = addUrls([], 'https://video.example.com/clip.mp4');
-  assert.equal(items[0].tweetId, null);
-}
+// canonicalizeStatusUrl: strips /photo/1, query strings, and maps twitter.com to x.com
+assert.equal(
+  canonicalizeStatusUrl('https://x.com/foo/status/1234567890123456789/photo/1'),
+  'https://x.com/foo/status/1234567890123456789'
+);
+assert.equal(canonicalizeStatusUrl('https://twitter.com/foo/status/42?s=20'), 'https://x.com/foo/status/42');
+assert.equal(canonicalizeStatusUrl('https://x.com/foo/status/99'), 'https://x.com/foo/status/99');
+assert.equal(canonicalizeStatusUrl('https://example.com/video.mp4'), null);
 
 // pickVariant: prefers the highest bitrate <= 3,000,000
 {
@@ -52,7 +45,7 @@ assert.equal(pickVariant(undefined), null);
 // extractTweetMedia: tombstone -> null
 assert.equal(extractTweetMedia({ __typename: 'TweetTombstone' }), null);
 
-// extractTweetMedia: normal tweet with one video
+// extractTweetMedia: video + photo in one tweet
 {
   const media = extractTweetMedia({
     user: { screen_name: 'someone' },
@@ -68,13 +61,16 @@ assert.equal(extractTweetMedia({ __typename: 'TweetTombstone' }), null);
           ],
         },
       },
-      { type: 'photo' },
+      { type: 'photo', media_url_https: 'https://pbs.twimg.com/photo.jpg' },
     ],
   });
   assert.equal(media.author, 'someone');
-  assert.equal(media.videos.length, 1);
-  assert.equal(media.videos[0].src, 'https://video.twimg.com/mid.mp4');
-  assert.equal(media.videos[0].poster, 'https://pbs.twimg.com/poster.jpg');
+  assert.equal(media.media.length, 2);
+  assert.equal(media.media[0].kind, 'video');
+  assert.equal(media.media[0].src, 'https://video.twimg.com/mid.mp4');
+  assert.equal(media.media[0].poster, 'https://pbs.twimg.com/poster.jpg');
+  assert.equal(media.media[1].kind, 'image');
+  assert.equal(media.media[1].src, 'https://pbs.twimg.com/photo.jpg');
 }
 
 console.log('ok');
