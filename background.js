@@ -3,7 +3,7 @@ import { canonicalizeStatusUrl, extractTweetId, buildSyndicationUrl, extractTwee
 const CACHE_KEY = 'mornXReferenceCache';
 
 chrome.action.onClicked.addListener(() => {
-  chrome.tabs.create({ url: 'https://x.com/i/bookmarks#mornxref' });
+  chrome.tabs.create({ url: 'https://x.com/i/history#mornxref' });
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

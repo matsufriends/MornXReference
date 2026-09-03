@@ -4,6 +4,9 @@
 
 const STYLE_ID = 'mxr-style';
 const GALLERY_LABEL = 'ギャラリー';
+// X はブックマーク一覧を /i/history (履歴 > ブックマーク) へ移した。旧パスも残す。
+const BOOKMARK_PATHS = ['/i/history', '/i/bookmarks'];
+const BOOKMARK_URL = '/i/history#mornxref';
 
 let overlayEl = null;
 let started = false;
@@ -36,7 +39,7 @@ function ensureGalleryItem() {
   clone.dataset.mornxref = '1';
   const link = clone.matches('a') ? clone : clone.querySelector('a');
   if (!link) return;
-  link.setAttribute('href', '/i/bookmarks#mornxref');
+  link.setAttribute('href', BOOKMARK_URL);
   link.setAttribute('aria-label', GALLERY_LABEL);
   for (const span of clone.querySelectorAll('span')) {
     if (span.textContent.trim()) span.textContent = GALLERY_LABEL;
@@ -50,11 +53,11 @@ function ensureGalleryItem() {
 function onGalleryClick(e) {
   e.preventDefault();
   if (overlayEl) return;
-  if (location.pathname === '/i/bookmarks') {
+  if (BOOKMARK_PATHS.includes(location.pathname)) {
     location.hash = '#mornxref';
     startCollection();
   } else {
-    location.href = '/i/bookmarks#mornxref';
+    location.href = BOOKMARK_URL;
   }
 }
 
@@ -234,6 +237,6 @@ function addTile(href, res) {
 ensureGalleryItem();
 new MutationObserver(ensureGalleryItem).observe(document.body, { childList: true, subtree: true });
 
-if (location.pathname === '/i/bookmarks' && location.hash === '#mornxref') {
+if (BOOKMARK_PATHS.includes(location.pathname) && location.hash === '#mornxref') {
   startCollection();
 }
