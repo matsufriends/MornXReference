@@ -183,8 +183,11 @@ function injectStyle() {
     .mxr-grid { flex: 1; overflow: auto; padding: 4px; display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--mxr-tile, 220px), 1fr)); gap: 4px; align-content: start; }
     .mxr-tile { display: block; }
     .mxr-media { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: contain; background: var(--mxr-soft); cursor: zoom-in; }
-    .mxr-tile-link { display: block; font-size: 12px; color: #1d9bf0; text-decoration: underline; cursor: pointer; padding: 2px 4px 4px; }
-    .mxr-link { font-size: 14px; padding: 6px 12px; color: #1d9bf0; text-decoration: underline; cursor: pointer; }
+    .mxr-tile-link { display: inline-block; font-size: 12px; color: #1d9bf0; text-decoration: underline; cursor: pointer; padding: 2px 4px 4px; }
+    .mxr-foot { display: flex; align-items: center; gap: 8px; }
+    .mxr-info, .mxr-tile-info { font-size: 12px; opacity: .7; }
+    .mxr-tile-info { margin-left: 6px; }
+    .mxr-link { font-size: 14px; padding: 6px 0; color: #1d9bf0; text-decoration: underline; cursor: pointer; }
   `;
   document.head.appendChild(style);
 }
@@ -278,7 +281,7 @@ function closeOverlay() {
   history.replaceState(null, '', location.pathname + location.search);
 }
 
-function openLightbox(media, href) {
+function openLightbox(media, href, res) {
   const box = document.createElement('div');
   box.className = 'mxr-lightbox';
   let el;
@@ -302,7 +305,13 @@ function openLightbox(media, href) {
   link.rel = 'noopener noreferrer';
   link.textContent = '元ポスト';
   link.addEventListener('click', (e) => e.stopPropagation());
-  box.appendChild(link);
+  const info = document.createElement('span');
+  info.className = 'mxr-info';
+  info.textContent = postInfo(res, tweetDate(href));
+  const foot = document.createElement('div');
+  foot.className = 'mxr-foot';
+  foot.append(link, info);
+  box.appendChild(foot);
   const close = () => {
     box.remove();
     document.removeEventListener('keydown', onKey);
@@ -330,6 +339,12 @@ function tweetDate(href) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+// 「元ポスト」リンクの後ろに、作者と投稿日を添える
+function postInfo(res, date) {
+  const author = res && res.author ? `@${res.author}` : '';
+  return [author, date.replace(/-/g, '/')].filter(Boolean).join(' ');
+}
+
 function addTile(href, res) {
   if (!overlayEl || !res || res.error || !res.media) return;
   const grid = overlayEl.querySelector('.mxr-grid');
@@ -352,7 +367,7 @@ function addTile(href, res) {
       el.preload = 'metadata';
       if (media.poster) el.poster = media.poster;
     }
-    el.addEventListener('click', () => openLightbox(media, href));
+    el.addEventListener('click', () => openLightbox(media, href, res));
     tile.appendChild(el);
     const link = document.createElement('a');
     link.className = 'mxr-tile-link';
@@ -361,6 +376,10 @@ function addTile(href, res) {
     link.rel = 'noopener noreferrer';
     link.textContent = '元ポスト';
     tile.appendChild(link);
+    const info = document.createElement('span');
+    info.className = 'mxr-tile-info';
+    info.textContent = postInfo(res, date);
+    tile.appendChild(info);
     grid.appendChild(tile);
   }
   applyFilter();
