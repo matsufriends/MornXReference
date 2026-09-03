@@ -108,7 +108,7 @@ async function startCollection() {
 
   let stableCount = 0;
   let lastHeight = -1;
-  for (let i = 0; i < 300; i++) {
+  for (let i = 0; i < 300 && overlayEl; i++) {
     collectNew();
     window.scrollTo(0, document.scrollingElement.scrollHeight);
     await sleep(1500);
@@ -231,6 +231,9 @@ function closeOverlay() {
   if (!overlayEl) return;
   overlayEl.remove();
   overlayEl = null;
+  started = false;
+  seen.clear();
+  fetchedCount = 0;
   placeGalleryButton();
   history.replaceState(null, '', location.pathname + location.search);
 }
@@ -319,7 +322,12 @@ ensureGalleryButton();
 new MutationObserver(() => {
   ensureGalleryButton();
   placeGalleryButton();
+  // X 内の画面遷移 (SPA) でブックマーク一覧を離れたらギャラリーも閉じる
+  if (overlayEl && !BOOKMARK_PATHS.includes(location.pathname)) closeOverlay();
 }).observe(document.body, { childList: true, subtree: true });
+window.addEventListener('popstate', () => {
+  if (overlayEl && !BOOKMARK_PATHS.includes(location.pathname)) closeOverlay();
+});
 window.addEventListener('resize', placeGalleryButton);
 
 if (BOOKMARK_PATHS.includes(location.pathname) && location.hash === '#mornxref') {
