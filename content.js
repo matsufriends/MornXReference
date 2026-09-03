@@ -9,6 +9,13 @@ const BOOKMARK_PATHS = ['/i/history', '/i/bookmarks'];
 const BOOKMARK_URL = '/i/history#mornxref';
 
 let overlayEl = null;
+// 上部バーの設定。chrome.storage.local に保存して次回も引き継ぐ
+const SETTINGS_KEY = 'mornXReferenceSettings';
+const settings = { tile: 220, muted: true };
+chrome.storage.local.get(SETTINGS_KEY, (r) => Object.assign(settings, r[SETTINGS_KEY] || {}));
+function saveSettings() {
+  chrome.storage.local.set({ [SETTINGS_KEY]: settings });
+}
 let started = false;
 const seen = new Set();
 let fetchedCount = 0;
@@ -170,6 +177,8 @@ function injectStyle() {
     .mxr-bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; flex: none; }
     .mxr-close { cursor: pointer; font-size: 18px; line-height: 1; background: var(--mxr-soft); border: 1px solid var(--mxr-line); border-radius: 6px; padding: 6px 12px; }
     .mxr-tile-size { cursor: pointer; }
+    .mxr-sound { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+    .mxr-sound-check { padding: 0; border: 0; background: none; cursor: pointer; }
     .mxr-progress { font-size: 13px; opacity: .7; margin-left: auto; }
     .mxr-grid { flex: 1; overflow: auto; padding: 4px; display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--mxr-tile, 220px), 1fr)); gap: 4px; align-content: start; }
     .mxr-tile { display: block; }
@@ -198,7 +207,8 @@ function openOverlay() {
   overlay.innerHTML = `
     <div class="mxr-bar">
       <button class="mxr-close" type="button" aria-label="閉じる">&times;</button>
-      <input class="mxr-tile-size" type="range" min="60" max="480" value="220" />
+      <input class="mxr-tile-size" type="range" min="60" max="480" value="${settings.tile}" />
+      <label class="mxr-sound"><input class="mxr-sound-check" type="checkbox" ${settings.muted ? '' : 'checked'} /> 音を出す</label>
       <span class="mxr-kinds">
         <button class="mxr-kind mxr-kind-on" type="button" data-kind="">全部</button>
         <button class="mxr-kind" type="button" data-kind="image">画像</button>
@@ -213,9 +223,17 @@ function openOverlay() {
     <div class="mxr-grid"></div>
   `;
   document.body.appendChild(overlay);
+  overlay.querySelector('.mxr-grid').style.setProperty('--mxr-tile', `${settings.tile}px`);
   overlay.querySelector('.mxr-close').addEventListener('click', closeOverlay);
   overlay.querySelector('.mxr-tile-size').addEventListener('input', (e) => {
-    overlay.querySelector('.mxr-grid').style.setProperty('--mxr-tile', `${e.target.value}px`);
+    settings.tile = Number(e.target.value);
+    overlay.querySelector('.mxr-grid').style.setProperty('--mxr-tile', `${settings.tile}px`);
+    saveSettings();
+  });
+  overlay.querySelector('.mxr-sound-check').addEventListener('change', (e) => {
+    settings.muted = !e.target.checked;
+    for (const v of overlay.querySelectorAll('video')) v.muted = settings.muted;
+    saveSettings();
   });
   for (const btn of overlay.querySelectorAll('.mxr-kind')) {
     btn.addEventListener('click', () => {
@@ -269,7 +287,7 @@ function openLightbox(media, href) {
     el.autoplay = true;
     el.loop = true;
     el.controls = true;
-    el.muted = true;
+    el.muted = settings.muted;
   } else {
     el = document.createElement('img');
     el.src = media.src;
@@ -327,7 +345,7 @@ function addTile(href, res) {
     el.src = media.src;
     if (media.kind === 'video') {
       el.autoplay = true;
-      el.muted = true;
+      el.muted = settings.muted;
       el.loop = true;
       el.playsInline = true;
       el.preload = 'metadata';
