@@ -231,8 +231,9 @@ function openOverlay() {
     saveSettings();
   });
   overlay.querySelector('.mxr-sound-check').addEventListener('change', (e) => {
+    // グリッドは常にミュート。音は拡大表示の動画だけ
     settings.muted = !e.target.checked;
-    for (const v of overlay.querySelectorAll('video')) v.muted = settings.muted;
+    for (const v of overlay.querySelectorAll('.mxr-lightbox video')) v.muted = settings.muted;
     saveSettings();
   });
   for (const btn of overlay.querySelectorAll('.mxr-kind')) {
@@ -345,7 +346,7 @@ function addTile(href, res) {
     el.src = media.src;
     if (media.kind === 'video') {
       el.autoplay = true;
-      el.muted = settings.muted;
+      el.muted = true;
       el.loop = true;
       el.playsInline = true;
       el.preload = 'metadata';
