@@ -148,6 +148,9 @@ function injectStyle() {
     .mxr-overlay input { font: 13px system-ui, sans-serif; color: #fff; background: #222; border: 1px solid #555; border-radius: 6px; padding: 5px 8px; }
     .mxr-overlay input[type="range"] { padding: 0; border: 0; background: none; width: 140px; }
     .mxr-overlay input[type="search"] { width: 240px; }
+    .mxr-tile video, .mxr-tile img { cursor: zoom-in; }
+    .mxr-lightbox { position: fixed; inset: 0; z-index: 2147483647; background: rgba(0,0,0,.92); display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+    .mxr-lightbox video, .mxr-lightbox img { max-width: 96vw; max-height: 96vh; display: block; object-fit: contain; cursor: default; }
     .mxr-kinds { display: inline-flex; border: 1px solid #555; border-radius: 6px; overflow: hidden; }
     .mxr-kind { cursor: pointer; font-size: 13px; color: #ccc; background: #222; padding: 6px 12px; }
     .mxr-kind-on { color: #000; background: #fff; }
@@ -217,6 +220,35 @@ function closeOverlay() {
   history.replaceState(null, '', location.pathname + location.search);
 }
 
+function openLightbox(media) {
+  const box = document.createElement('div');
+  box.className = 'mxr-lightbox';
+  let el;
+  if (media.kind === 'video') {
+    el = document.createElement('video');
+    el.src = media.src;
+    el.autoplay = true;
+    el.loop = true;
+    el.controls = true;
+    el.muted = true;
+  } else {
+    el = document.createElement('img');
+    el.src = media.src;
+  }
+  el.addEventListener('click', (e) => e.stopPropagation());
+  box.appendChild(el);
+  const close = () => {
+    box.remove();
+    document.removeEventListener('keydown', onKey);
+  };
+  const onKey = (e) => {
+    if (e.key === 'Escape') close();
+  };
+  box.addEventListener('click', close);
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(box);
+}
+
 function updateProgress() {
   if (!overlayEl) return;
   overlayEl.querySelector('.mxr-progress').textContent = `収集 ${seen.size} / 取得 ${fetchedCount}`;
@@ -247,10 +279,12 @@ function addTile(href, res) {
         video.playsInline = true;
         video.preload = 'metadata';
         if (media.poster) video.poster = media.poster;
+        video.addEventListener('click', () => openLightbox(media));
         tile.appendChild(video);
       } else {
         const img = document.createElement('img');
         img.src = media.src;
+        img.addEventListener('click', () => openLightbox(media));
         tile.appendChild(img);
       }
     }
