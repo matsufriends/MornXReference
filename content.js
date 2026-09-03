@@ -211,7 +211,7 @@ function injectStyle() {
     .mxr-button-on { background: color-mix(in srgb, currentColor 15%, transparent); }
     .mxr-tilde { font-size: 13px; opacity: .7; }
     .mxr-lightbox { position: absolute; inset: 0; z-index: 1; background: color-mix(in srgb, var(--mxr-bg) 92%, transparent); display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center; cursor: zoom-out; }
-    .mxr-lightbox video, .mxr-lightbox img { max-width: 96%; max-height: calc(100% - 60px); display: block; object-fit: contain; cursor: default; }
+    .mxr-lightbox video, .mxr-lightbox img { width: auto; aspect-ratio: auto; background: none; max-width: 96%; max-height: calc(100% - 60px); display: block; object-fit: contain; cursor: default; }
     .mxr-kinds { display: inline-flex; border: 1px solid var(--mxr-line); border-radius: 6px; overflow: hidden; }
     .mxr-kind { cursor: pointer; font-size: 13px; background: var(--mxr-soft); padding: 6px 12px; }
     .mxr-kind-on { color: var(--mxr-bg); background: var(--mxr-fg); }
@@ -332,17 +332,23 @@ function closeOverlay() {
   history.replaceState(null, '', location.pathname + location.search);
 }
 
-function openLightbox(media, href, res) {
+// 動画はグリッドで再生中の要素をそのまま移して使う (新しく作ると長い動画は読み込み直しで待たされる)
+function openLightbox(media, href, res, sourceEl) {
   const box = document.createElement('div');
   box.className = 'mxr-lightbox';
   let el;
+  let restore = null;
   if (media.kind === 'video') {
-    el = document.createElement('video');
-    el.src = media.src;
-    el.autoplay = true;
-    el.loop = true;
+    el = sourceEl;
+    const parent = el.parentElement;
+    const next = el.nextSibling;
     el.controls = true;
     el.muted = settings.muted;
+    restore = () => {
+      el.controls = false;
+      el.muted = true;
+      parent.insertBefore(el, next);
+    };
   } else {
     el = document.createElement('img');
     el.src = media.src;
@@ -364,6 +370,7 @@ function openLightbox(media, href, res) {
   foot.append(link, info);
   box.appendChild(foot);
   const close = () => {
+    if (restore) restore();
     box.remove();
     document.removeEventListener('keydown', onKey);
   };
@@ -426,7 +433,7 @@ function addTile(href, res, isNew) {
       el.preload = 'metadata';
       if (media.poster) el.poster = media.poster;
     }
-    el.addEventListener('click', () => openLightbox(media, href, res));
+    el.addEventListener('click', () => openLightbox(media, href, res, el));
     tile.appendChild(el);
     const link = document.createElement('a');
     link.className = 'mxr-tile-link';
