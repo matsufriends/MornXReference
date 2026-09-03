@@ -149,6 +149,8 @@ function injectStyle() {
     .mxr-overlay input { font: 13px system-ui, sans-serif; color: var(--mxr-fg); background: var(--mxr-soft); border: 1px solid var(--mxr-line); border-radius: 6px; padding: 5px 8px; }
     .mxr-overlay input[type="range"] { padding: 0; border: 0; background: none; width: 140px; }
     .mxr-overlay input[type="search"] { width: 240px; }
+    .mxr-overlay input[type="date"] { color-scheme: light dark; }
+    .mxr-tilde { font-size: 13px; opacity: .7; }
     .mxr-lightbox { position: fixed; inset: 0; z-index: 2147483647; background: color-mix(in srgb, var(--mxr-bg) 92%, transparent); display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
     .mxr-lightbox video, .mxr-lightbox img { max-width: 96vw; max-height: 96vh; display: block; object-fit: contain; cursor: default; }
     .mxr-kinds { display: inline-flex; border: 1px solid var(--mxr-line); border-radius: 6px; overflow: hidden; }
@@ -184,6 +186,9 @@ function openOverlay() {
         <button class="mxr-kind" type="button" data-kind="video">動画</button>
       </span>
       <input class="mxr-search" type="search" placeholder="文字で絞り込み" />
+      <input class="mxr-from" type="date" title="この日から" />
+      <span class="mxr-tilde">〜</span>
+      <input class="mxr-to" type="date" title="この日まで" />
       <span class="mxr-progress"></span>
     </div>
     <div class="mxr-grid"></div>
@@ -199,7 +204,9 @@ function openOverlay() {
       applyFilter();
     });
   }
-  overlay.querySelector('.mxr-search').addEventListener('input', applyFilter);
+  for (const sel of ['.mxr-search', '.mxr-from', '.mxr-to']) {
+    overlay.querySelector(sel).addEventListener('input', applyFilter);
+  }
   overlayEl = overlay;
   updateProgress();
 }
@@ -208,8 +215,15 @@ function applyFilter() {
   if (!overlayEl) return;
   const kind = overlayEl.querySelector('.mxr-kind-on').dataset.kind;
   const query = overlayEl.querySelector('.mxr-search').value.trim().toLowerCase();
+  const from = overlayEl.querySelector('.mxr-from').value;
+  const to = overlayEl.querySelector('.mxr-to').value;
   for (const tile of overlayEl.querySelectorAll('.mxr-tile')) {
-    const show = (!kind || tile.dataset.kind === kind) && (!query || tile.dataset.text.includes(query));
+    const d = tile.dataset.date;
+    const show =
+      (!kind || tile.dataset.kind === kind) &&
+      (!query || tile.dataset.text.includes(query)) &&
+      (!from || d >= from) &&
+      (!to || d <= to);
     tile.style.display = show ? '' : 'none';
   }
 }
@@ -263,15 +277,27 @@ function updateProgress() {
   overlayEl.querySelector('.mxr-progress').textContent = `収集 ${seen.size} / 取得 ${fetchedCount}`;
 }
 
+// ポスト ID (Snowflake) から投稿日 (ローカル日付 YYYY-MM-DD) を得る。API 応答に依存しない。
+function tweetDate(href) {
+  const m = href.match(/\/status\/(\d+)/);
+  if (!m) return '';
+  const ms = Number(BigInt(m[1]) >> 22n) + 1288834974657;
+  const d = new Date(ms);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 function addTile(href, res) {
   if (!overlayEl || !res || res.error || !res.media) return;
   const grid = overlayEl.querySelector('.mxr-grid');
   const text = `${res.author || ''} ${res.text || ''}`.toLowerCase();
+  const date = tweetDate(href);
   for (const media of res.media) {
     const el = document.createElement(media.kind === 'video' ? 'video' : 'img');
     el.className = 'mxr-tile';
     el.dataset.kind = media.kind === 'video' ? 'video' : 'image';
     el.dataset.text = text;
+    el.dataset.date = date;
     el.src = media.src;
     if (media.kind === 'video') {
       el.autoplay = true;
