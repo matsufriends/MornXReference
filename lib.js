@@ -1,4 +1,4 @@
-// Pure functions shared by app.js/background.js (import) and test.mjs (node). No DOM/fetch here.
+// Pure functions shared by background.js (import) and test.mjs (node). No DOM/fetch here.
 
 export function extractTweetId(url) {
   const m = String(url).match(/\/status\/(\d+)/);
