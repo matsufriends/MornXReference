@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "MornXReference",
+  "version": "1.0.0",
+  "description": "X (Twitter) の動画URLをグリッド状に自動再生して閲覧する。Live2D WIP リファレンス用。",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://cdn.syndication.twimg.com/*",
+    "https://video.twimg.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "MornXReference"
+  }
+}
