@@ -36,7 +36,9 @@ function ensureGalleryButton() {
 
 function placeGalleryButton() {
   if (!buttonEl) return;
-  const logo = document.querySelector('header[role="banner"] a[href="/home"]');
+  const logo =
+    document.querySelector('header[role="banner"] h1 a[href="/home"]') ||
+    document.querySelector('header[role="banner"] a[href="/home"]');
   const r = logo ? logo.getBoundingClientRect() : null;
   buttonEl.style.left = `${r ? r.right + 8 : 8}px`;
   buttonEl.style.top = `${r ? r.top + (r.height - 40) / 2 : 8}px`;
