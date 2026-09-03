@@ -1,4 +1,4 @@
-import { addUrls, buildSyndicationUrl, extractTweetMedia } from './lib.js';
+import { buildSyndicationUrl, extractTweetMedia } from './lib.js';
 
 const STORAGE_KEY = 'mornXReferenceItems';
 
@@ -27,7 +27,7 @@ async function saveItems(items) {
 
 async function fetchTweet(item) {
   if (!item.tweetId) {
-    item.videos = [{ src: item.url, poster: null }];
+    item.error = '取得不可';
     return;
   }
   try {
@@ -38,14 +38,13 @@ async function fetchTweet(item) {
     }
     const json = await res.json();
     const media = extractTweetMedia(json);
-    if (!media) {
+    if (!media || media.media.length === 0) {
       item.error = '取得不可';
       return;
     }
     item.author = media.author;
     item.text = media.text;
-    item.videos = media.videos;
-    if (item.videos.length === 0) item.error = '取得不可';
+    item.media = media.media;
   } catch {
     item.error = '取得不可';
   }
@@ -55,32 +54,28 @@ function renderTile(item) {
   const tile = document.createElement('div');
   tile.className = 'tile';
 
-  const removeBtn = document.createElement('button');
-  removeBtn.className = 'remove';
-  removeBtn.textContent = '×';
-  removeBtn.addEventListener('click', async () => {
-    const items = (await loadItems()).filter((i) => i.url !== item.url);
-    await saveItems(items);
-    tile.remove();
-  });
-  tile.appendChild(removeBtn);
-
   if (item.error) {
     const err = document.createElement('div');
     err.className = 'error';
     err.textContent = item.error;
     tile.appendChild(err);
-  } else if (item.videos && item.videos.length > 0) {
-    for (const v of item.videos) {
-      const video = document.createElement('video');
-      video.src = v.src;
-      if (v.poster) video.poster = v.poster;
-      video.autoplay = true;
-      video.muted = true;
-      video.loop = true;
-      video.playsInline = true;
-      video.preload = 'metadata';
-      tile.appendChild(video);
+  } else if (item.media && item.media.length > 0) {
+    for (const m of item.media) {
+      if (m.kind === 'video') {
+        const video = document.createElement('video');
+        video.src = m.src;
+        if (m.poster) video.poster = m.poster;
+        video.autoplay = true;
+        video.muted = true;
+        video.loop = true;
+        video.playsInline = true;
+        video.preload = 'metadata';
+        tile.appendChild(video);
+      } else {
+        const img = document.createElement('img');
+        img.src = m.src;
+        tile.appendChild(img);
+      }
     }
   }
 
@@ -95,7 +90,7 @@ function renderTile(item) {
   link.href = item.url;
   link.target = '_blank';
   link.rel = 'noopener noreferrer';
-  link.textContent = '元ツイート';
+  link.textContent = '元ポスト';
   tile.appendChild(link);
 
   return tile;
@@ -107,29 +102,42 @@ function renderGrid(items) {
   for (const item of items) grid.appendChild(renderTile(item));
 }
 
+function isUnfetched(item) {
+  return item.media.length === 0 && !item.error;
+}
+
+async function fetchPending(items) {
+  const pending = items.filter(isUnfetched);
+  if (pending.length === 0) return;
+  await Promise.all(pending.map((item) => fetchTweet(item)));
+  await saveItems(items);
+  renderGrid(items);
+}
+
 async function init() {
-  const form = document.getElementById('add-form');
-  const textarea = document.getElementById('urls');
+  const reloadBtn = document.getElementById('reload');
   const tileRange = document.getElementById('tile-size');
 
   tileRange.addEventListener('input', () => {
     document.documentElement.style.setProperty('--tile', `${tileRange.value}px`);
   });
 
+  reloadBtn.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: 'importBookmarks' });
+  });
+
   let items = await loadItems();
   renderGrid(items);
+  await fetchPending(items);
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const { items: nextItems, added } = addUrls(items, textarea.value);
-    items = nextItems;
-    await saveItems(items);
-    renderGrid(items);
-    textarea.value = '';
-    await Promise.all(added.map((item) => fetchTweet(item)));
-    await saveItems(items);
-    renderGrid(items);
-  });
+  if (hasChromeStorage) {
+    chrome.storage.onChanged.addListener(async (changes, area) => {
+      if (area !== 'local' || !changes[STORAGE_KEY]) return;
+      items = changes[STORAGE_KEY].newValue || [];
+      renderGrid(items);
+      await fetchPending(items);
+    });
+  }
 }
 
 init();

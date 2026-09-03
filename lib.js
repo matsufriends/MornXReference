@@ -1,4 +1,4 @@
-// Pure functions shared by app.js (browser) and test.mjs (node). No DOM/fetch here.
+// Pure functions shared by app.js/background.js (import) and test.mjs (node). No DOM/fetch here.
 
 export function extractTweetId(url) {
   const m = String(url).match(/\/status\/(\d+)/);
@@ -14,24 +14,12 @@ export function buildSyndicationUrl(tweetId) {
   return `https://cdn.syndication.twimg.com/tweet-result?id=${tweetId}&lang=en&token=${token}`;
 }
 
-export function normalizeUrl(url) {
-  return String(url).trim();
-}
-
-// Adds new urls to existing items, skipping duplicates and blanks. Returns { items, added }.
-export function addUrls(existingItems, rawText) {
-  const existingUrls = new Set(existingItems.map((item) => item.url));
-  const items = existingItems.slice();
-  const added = [];
-  for (const line of String(rawText).split('\n')) {
-    const url = normalizeUrl(line);
-    if (!url || existingUrls.has(url)) continue;
-    existingUrls.add(url);
-    const entry = { url, tweetId: extractTweetId(url), author: null, text: null, videos: [], error: null };
-    items.push(entry);
-    added.push(entry);
-  }
-  return { items, added };
+// Normalizes a tweet permalink to https://x.com/<name>/status/<id> — drops
+// trailing segments (/photo/1 etc.), query strings, and maps twitter.com to x.com.
+export function canonicalizeStatusUrl(url) {
+  const m = String(url).match(/^https?:\/\/(?:www\.|mobile\.)?(?:x\.com|twitter\.com)\/([^/?#]+)\/status\/(\d+)/);
+  if (!m) return null;
+  return `https://x.com/${m[1]}/status/${m[2]}`;
 }
 
 // variants: video_info.variants[] from the syndication API. Picks the mp4 with
@@ -47,18 +35,22 @@ export function pickVariant(variants) {
   return mp4s.reduce((best, v) => ((v.bitrate || 0) < (best.bitrate || 0) ? v : best));
 }
 
-// Turns a syndication API tweet-result JSON body into { author, text, videos } or null on tombstone.
+// Turns a syndication API tweet-result JSON body into { author, text, media } or null on tombstone.
+// media entries: { kind: 'image', src } or { kind: 'video', src, poster }.
 export function extractTweetMedia(tweetResult) {
   if (!tweetResult || tweetResult.__typename === 'TweetTombstone') return null;
   const author = tweetResult.user ? tweetResult.user.screen_name : null;
   const text = tweetResult.text || '';
   const details = tweetResult.mediaDetails || [];
-  const videos = [];
-  for (const media of details) {
-    if (media.type !== 'video' && media.type !== 'animated_gif') continue;
-    const variant = pickVariant(media.video_info && media.video_info.variants);
-    if (!variant) continue;
-    videos.push({ src: variant.url, poster: media.media_url_https || null });
+  const media = [];
+  for (const item of details) {
+    if (item.type === 'photo') {
+      media.push({ kind: 'image', src: item.media_url_https });
+    } else if (item.type === 'video' || item.type === 'animated_gif') {
+      const variant = pickVariant(item.video_info && item.video_info.variants);
+      if (!variant) continue;
+      media.push({ kind: 'video', src: variant.url, poster: item.media_url_https || null });
+    }
   }
-  return { author, text, videos };
+  return { author, text, media };
 }

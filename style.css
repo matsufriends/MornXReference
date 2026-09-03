@@ -20,12 +20,6 @@ header {
   margin-bottom: var(--gap);
 }
 
-textarea {
-  width: 100%;
-  resize: vertical;
-  font-family: inherit;
-}
-
 .controls {
   display: flex;
   align-items: center;
@@ -56,7 +50,8 @@ button:hover {
   flex-direction: column;
 }
 
-.tile video {
+.tile video,
+.tile img {
   width: 100%;
   aspect-ratio: 9 / 16;
   object-fit: cover;
@@ -82,22 +77,4 @@ button:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.tile .remove {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  z-index: 1;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  border: none;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-}
-
-.tile .remove:hover {
-  background: rgba(200, 0, 0, 0.8);
-  filter: none;
 }
