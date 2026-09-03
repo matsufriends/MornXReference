@@ -31,7 +31,7 @@ Live2D の WIP など「動いているものを一覧で見比べたい」用�
 - 言語: 日本語
 - アイコン: `icons/icon128.png`
 - スクリーンショット: `docs/store/screenshot-1.png` (1280x800)。追加する場合も同じサイズで
-- プライバシーポリシー URL: https://github.com/matsufriends/MornXReference/blob/master/PRIVACY.md
+- プライバシーポリシー URL: https://github.com/matsufriends/MornXReference/blob/main/PRIVACY.md
 
 ## プライバシーへの取り組み (権限の目的説明)
 
