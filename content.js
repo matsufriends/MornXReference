@@ -148,7 +148,6 @@ function injectStyle() {
     .mxr-overlay input { font: 13px system-ui, sans-serif; color: #fff; background: #222; border: 1px solid #555; border-radius: 6px; padding: 5px 8px; }
     .mxr-overlay input[type="range"] { padding: 0; border: 0; background: none; width: 140px; }
     .mxr-overlay input[type="search"] { width: 240px; }
-    .mxr-tile video, .mxr-tile img { cursor: zoom-in; }
     .mxr-lightbox { position: fixed; inset: 0; z-index: 2147483647; background: rgba(0,0,0,.92); display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
     .mxr-lightbox video, .mxr-lightbox img { max-width: 96vw; max-height: 96vh; display: block; object-fit: contain; cursor: default; }
     .mxr-kinds { display: inline-flex; border: 1px solid #555; border-radius: 6px; overflow: hidden; }
@@ -159,12 +158,9 @@ function injectStyle() {
     .mxr-close { cursor: pointer; font-size: 18px; line-height: 1; color: #fff; background: #222; border: 1px solid #555; border-radius: 6px; padding: 6px 12px; }
     .mxr-tile-size { cursor: pointer; }
     .mxr-progress { font-size: 13px; color: #ccc; margin-left: auto; }
-    .mxr-grid { flex: 1; overflow: auto; padding: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--mxr-tile, 220px), 1fr)); gap: 8px; align-content: start; }
-    .mxr-tile { background: #111; border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; }
-    .mxr-tile video, .mxr-tile img { width: 100%; display: block; object-fit: cover; aspect-ratio: 1 / 1; }
-    .mxr-caption { display: block; font-size: 11px; color: #ddd; padding: 4px 6px; }
-    .mxr-error { display: block; padding: 24px 8px; text-align: center; color: #888; font-size: 12px; }
-    .mxr-link { display: block; font-size: 11px; color: #4ea1ff; padding: 0 6px 6px; text-decoration: underline; cursor: pointer; }
+    .mxr-grid { flex: 1; overflow: auto; padding: 4px; display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--mxr-tile, 220px), 1fr)); gap: 4px; align-content: start; }
+    .mxr-tile { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: contain; background: #111; cursor: zoom-in; }
+    .mxr-link { position: fixed; left: 16px; bottom: 16px; font-size: 13px; color: #4ea1ff; text-decoration: underline; cursor: pointer; }
   `;
   document.head.appendChild(style);
 }
@@ -220,7 +216,7 @@ function closeOverlay() {
   history.replaceState(null, '', location.pathname + location.search);
 }
 
-function openLightbox(media) {
+function openLightbox(media, href) {
   const box = document.createElement('div');
   box.className = 'mxr-lightbox';
   let el;
@@ -237,6 +233,14 @@ function openLightbox(media) {
   }
   el.addEventListener('click', (e) => e.stopPropagation());
   box.appendChild(el);
+  const link = document.createElement('a');
+  link.className = 'mxr-link';
+  link.href = href;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = '元ポスト';
+  link.addEventListener('click', (e) => e.stopPropagation());
+  box.appendChild(link);
   const close = () => {
     box.remove();
     document.removeEventListener('keydown', onKey);
@@ -255,55 +259,26 @@ function updateProgress() {
 }
 
 function addTile(href, res) {
-  if (!overlayEl) return;
+  if (!overlayEl || !res || res.error || !res.media) return;
   const grid = overlayEl.querySelector('.mxr-grid');
-  const tile = document.createElement('div');
-  tile.className = 'mxr-tile';
-  const mediaList = (res && res.media) || [];
-  tile.dataset.kind = mediaList.some((m) => m.kind === 'video') ? 'video' : 'image';
-  tile.dataset.text = `${(res && res.author) || ''} ${(res && res.text) || ''}`.toLowerCase();
-
-  if (!res || res.error || !res.media || res.media.length === 0) {
-    const error = document.createElement('div');
-    error.className = 'mxr-error';
-    error.textContent = '取得不可';
-    tile.appendChild(error);
-  } else {
-    for (const media of res.media) {
-      if (media.kind === 'video') {
-        const video = document.createElement('video');
-        video.src = media.src;
-        video.autoplay = true;
-        video.muted = true;
-        video.loop = true;
-        video.playsInline = true;
-        video.preload = 'metadata';
-        if (media.poster) video.poster = media.poster;
-        video.addEventListener('click', () => openLightbox(media));
-        tile.appendChild(video);
-      } else {
-        const img = document.createElement('img');
-        img.src = media.src;
-        img.addEventListener('click', () => openLightbox(media));
-        tile.appendChild(img);
-      }
+  const text = `${res.author || ''} ${res.text || ''}`.toLowerCase();
+  for (const media of res.media) {
+    const el = document.createElement(media.kind === 'video' ? 'video' : 'img');
+    el.className = 'mxr-tile';
+    el.dataset.kind = media.kind === 'video' ? 'video' : 'image';
+    el.dataset.text = text;
+    el.src = media.src;
+    if (media.kind === 'video') {
+      el.autoplay = true;
+      el.muted = true;
+      el.loop = true;
+      el.playsInline = true;
+      el.preload = 'metadata';
+      if (media.poster) el.poster = media.poster;
     }
-    const caption = document.createElement('span');
-    caption.className = 'mxr-caption';
-    const author = res.author ? `@${res.author} ` : '';
-    caption.textContent = `${author}${(res.text || '').slice(0, 60)}`;
-    tile.appendChild(caption);
+    el.addEventListener('click', () => openLightbox(media, href));
+    grid.appendChild(el);
   }
-
-  const link = document.createElement('a');
-  link.className = 'mxr-link';
-  link.href = href;
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
-  link.textContent = '元ポスト';
-  tile.appendChild(link);
-
-  grid.appendChild(tile);
   applyFilter();
 }
 
