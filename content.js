@@ -19,8 +19,15 @@ let fetchedCount = 0;
 const ROW_CANDIDATES = ['/i/bookmarks', '/i/history', '/explore', '/home'];
 const GRID_ICON_PATH = 'M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z';
 
+function isActiveRow(link) {
+  const span = [...link.querySelectorAll('span')].find((el) => el.textContent.trim());
+  return !!span && Number(getComputedStyle(span).fontWeight) >= 600;
+}
+
 function findSidebarRow(nav) {
-  const link = ROW_CANDIDATES.map((h) => nav.querySelector(`a[href="${h}"]`)).find(Boolean);
+  const links = ROW_CANDIDATES.map((h) => nav.querySelector(`a[href="${h}"]`)).filter(Boolean);
+  // 現在地の項目 (太字) を複製すると「ギャラリー」が常に選択中の見た目になるので避ける
+  const link = links.find((l) => !isActiveRow(l)) || links[0];
   if (!link) return null;
   let node = link;
   while (node.parentElement && node.parentElement !== nav) {
@@ -41,6 +48,7 @@ function ensureGalleryItem() {
   if (!link) return;
   link.setAttribute('href', BOOKMARK_URL);
   link.setAttribute('aria-label', GALLERY_LABEL);
+  link.removeAttribute('aria-current');
   for (const span of clone.querySelectorAll('span')) {
     if (span.textContent.trim()) span.textContent = GALLERY_LABEL;
   }
@@ -136,7 +144,13 @@ function injectStyle() {
   const style = document.createElement('style');
   style.id = STYLE_ID;
   style.textContent = `
-    .mxr-overlay, .mxr-overlay * { all: initial; box-sizing: border-box; font-family: system-ui, sans-serif; }
+    .mxr-overlay, .mxr-overlay *:not(input):not(select) { all: initial; box-sizing: border-box; font-family: system-ui, sans-serif; }
+    .mxr-overlay input { font: 13px system-ui, sans-serif; color: #fff; background: #222; border: 1px solid #555; border-radius: 6px; padding: 5px 8px; }
+    .mxr-overlay input[type="range"] { padding: 0; border: 0; background: none; width: 140px; }
+    .mxr-overlay input[type="search"] { width: 240px; }
+    .mxr-kinds { display: inline-flex; border: 1px solid #555; border-radius: 6px; overflow: hidden; }
+    .mxr-kind { cursor: pointer; font-size: 13px; color: #ccc; background: #222; padding: 6px 12px; }
+    .mxr-kind-on { color: #000; background: #fff; }
     .mxr-overlay { position: fixed; inset: 0; z-index: 2147483647; background: #000; color: #fff; display: flex; flex-direction: column; }
     .mxr-bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; flex: none; }
     .mxr-close { cursor: pointer; font-size: 18px; line-height: 1; color: #fff; background: #222; border: 1px solid #555; border-radius: 6px; padding: 6px 12px; }
@@ -160,6 +174,12 @@ function openOverlay() {
     <div class="mxr-bar">
       <button class="mxr-close" type="button" aria-label="閉じる">&times;</button>
       <input class="mxr-tile-size" type="range" min="120" max="480" value="220" />
+      <span class="mxr-kinds">
+        <button class="mxr-kind mxr-kind-on" type="button" data-kind="">全部</button>
+        <button class="mxr-kind" type="button" data-kind="image">画像</button>
+        <button class="mxr-kind" type="button" data-kind="video">動画</button>
+      </span>
+      <input class="mxr-search" type="search" placeholder="文字で絞り込み" />
       <span class="mxr-progress"></span>
     </div>
     <div class="mxr-grid"></div>
@@ -169,8 +189,25 @@ function openOverlay() {
   overlay.querySelector('.mxr-tile-size').addEventListener('input', (e) => {
     overlay.style.setProperty('--mxr-tile', `${e.target.value}px`);
   });
+  for (const btn of overlay.querySelectorAll('.mxr-kind')) {
+    btn.addEventListener('click', () => {
+      for (const b of overlay.querySelectorAll('.mxr-kind')) b.classList.toggle('mxr-kind-on', b === btn);
+      applyFilter();
+    });
+  }
+  overlay.querySelector('.mxr-search').addEventListener('input', applyFilter);
   overlayEl = overlay;
   updateProgress();
+}
+
+function applyFilter() {
+  if (!overlayEl) return;
+  const kind = overlayEl.querySelector('.mxr-kind-on').dataset.kind;
+  const query = overlayEl.querySelector('.mxr-search').value.trim().toLowerCase();
+  for (const tile of overlayEl.querySelectorAll('.mxr-tile')) {
+    const show = (!kind || tile.dataset.kind === kind) && (!query || tile.dataset.text.includes(query));
+    tile.style.display = show ? '' : 'none';
+  }
 }
 
 function closeOverlay() {
@@ -190,6 +227,9 @@ function addTile(href, res) {
   const grid = overlayEl.querySelector('.mxr-grid');
   const tile = document.createElement('div');
   tile.className = 'mxr-tile';
+  const mediaList = (res && res.media) || [];
+  tile.dataset.kind = mediaList.some((m) => m.kind === 'video') ? 'video' : 'image';
+  tile.dataset.text = `${(res && res.author) || ''} ${(res && res.text) || ''}`.toLowerCase();
 
   if (!res || res.error || !res.media || res.media.length === 0) {
     const error = document.createElement('div');
@@ -230,6 +270,7 @@ function addTile(href, res) {
   tile.appendChild(link);
 
   grid.appendChild(tile);
+  applyFilter();
 }
 
 // --- boot -----------------------------------------------------------------
