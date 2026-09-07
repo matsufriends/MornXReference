@@ -1,7 +1,7 @@
 // Photoshop の「ファイル > スクリプト > 参照」から実行。
 (function () {
   var dir = new File($.fileName).parent;
-  var store = new Folder(dir + '/../docs/store');
+  var store = new Folder(dir + '/../docs');
   var source = app.open(new File(dir + '/ogp.psd'));
   var doc = source.duplicate('ストア用サムネイル', false);
   app.activeDocument = doc;
@@ -42,6 +42,6 @@
   find('Footer studio').textItem.font = 'HiraginoSans-W6';
   doc.saveAs(new File(dir + '/store-promo.psd'), new PhotoshopSaveOptions(), true, Extension.LOWERCASE);
   doc.flatten();
-  doc.saveAs(new File(store + '/promo-small.png'), new PNGSaveOptions(), true, Extension.LOWERCASE);
+  doc.saveAs(new File(store + '/thumbnail.png'), new PNGSaveOptions(), true, Extension.LOWERCASE);
   doc.close(SaveOptions.DONOTSAVECHANGES);
 }());

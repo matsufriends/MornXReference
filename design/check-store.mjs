@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-const dir = process.argv[2] || fileURLToPath(new URL('../docs/store/', import.meta.url));
+const dir = process.argv[2] || fileURLToPath(new URL('../docs/', import.meta.url));
 for (const [name, width, height] of [
-  ['promo-small.png', 440, 280],
-  ['screenshot-gallery.png', 1280, 800],
+  ['thumbnail.png', 440, 280],
+  ['screenshot.png', 1280, 800],
 ]) {
   const png = readFileSync(join(dir, name));
   assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', name);

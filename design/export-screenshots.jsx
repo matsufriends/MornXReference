@@ -32,12 +32,12 @@
     l.translate(x - l.bounds[0].as('px'), y - l.bounds[1].as('px'));
   }
   rect('画面枠', 92, 96, 1096, 688, 'D5DDB4');
-  place(dir + '/../docs/store/screenshot-1.png', '提供された実画面（ぼかしを保持）', 96, 100, 1088);
+  place(dir + '/screenshot-source.png', '提供された実画面（ぼかしを保持）', 96, 100, 1088);
   place(dir + '/../icons/icon128.png', 'アプリアイコン', 96, 30, 40);
   text('アプリ名', 'MornXReference', 150, 60, 27, 'HelveticaNeue-Bold');
   text('見出し', 'Xのブックマークを、一覧で。', 760, 60, 22, 'HiraginoSans-W6');
   doc.saveAs(new File(dir + '/store-screenshot.psd'), new PhotoshopSaveOptions(), true, Extension.LOWERCASE);
   doc.flatten();
-  doc.saveAs(new File(dir + '/../docs/store/screenshot-gallery.png'), new PNGSaveOptions(), true, Extension.LOWERCASE);
+  doc.saveAs(new File(dir + '/../docs/screenshot.png'), new PNGSaveOptions(), true, Extension.LOWERCASE);
   doc.close(SaveOptions.DONOTSAVECHANGES);
 }());

@@ -14,10 +14,10 @@ Photoshopで `ogp.psd` を編集して保存した後、「ファイル > スク
 
 - `store-promo.psd`: 小さいプロモーション画像の編集用PSD（440×280）。
 - `store-screenshot.psd`: 実画面をスマートオブジェクトとして保持した編集用PSD（1280×800）。
-- `../docs/store/promo-small.png`: サムネイル（440×280、透明部分なし）。
-- `../docs/store/screenshot-gallery.png`: 実画面を使用した掲載画像（1280×800、透明部分なし）。
+- `../docs/thumbnail.png`: サムネイル（440×280、透明部分なし）。
+- `../docs/screenshot.png`: 実画面を使用した掲載画像（1280×800、透明部分なし）。
 
-元の実画面は `../docs/store/screenshot-1.png` です。投稿のぼかしとUIを保持し、全体を縮小して枠・見出し・アイコンを追加しています。画面内の操作状態や投稿内容は描き替えていません。
+元の実画面は `screenshot-source.png` です。投稿のぼかしとUIを保持し、全体を縮小して枠・見出し・アイコンを追加しています。画面内の操作状態や投稿内容は描き替えていません。
 
 Photoshopで `export-store.jsx` を実行するとストア用サムネイルを、`export-screenshots.jsx` を実行すると実画面を使用した掲載画像を再作成できます。スクリプトは編集用PSDも作り直します。PSDを直接編集した場合は、そのPSDからPNGを書き出してください。
 
