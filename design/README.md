@@ -13,14 +13,14 @@ Photoshopで `ogp.psd` を編集して保存した後、「ファイル > スク
 ## Chromeウェブストア用
 
 - `store-promo.psd`: 小さいプロモーション画像の編集用PSD（440×280）。
-- `../docs/store/promo-small.png`: 必須のサムネイル（440×280、透明部分なし）。
-- `../docs/store/screenshot-gallery.png`: ギャラリー一覧（1280×800）。
-- `../docs/store/screenshot-images.png`: 画像だけに絞り込んだ一覧（1280×800）。
+- `store-screenshot.psd`: 実画面をスマートオブジェクトとして保持した編集用PSD（1280×800）。
+- `../docs/store/promo-small.png`: サムネイル（440×280、透明部分なし）。
+- `../docs/store/screenshot-gallery.png`: 実画面を使用した掲載画像（1280×800、透明部分なし）。
 
-Photoshopで `export-store.jsx` を実行すると、`ogp.psd` とアイコンからストア用PSD・サムネイル・`samples/` の画像を書き出します。`store-promo.psd` を直接編集した場合はそのPSDからPNGを書き出してください（スクリプトの再実行はPSDを作り直します）。
+元の実画面は `../docs/store/screenshot-1.png` です。投稿のぼかしとUIを保持し、全体を縮小して枠・見出し・アイコンを追加しています。画面内の操作状態や投稿内容は描き替えていません。
 
-スクリーンショットは実際の `content.js` のUIを、架空のサンプル投稿で表示したものです。Xのページや実在のユーザーの投稿は使用していません。Playwrightが利用できる環境で `node design/export-screenshots.mjs` を実行して再作成できます。サンプル動画は `ffmpeg -loop 1 -i design/samples/sample-0.png -t 2 -c:v libvpx-vp9 -pix_fmt yuv420p design/samples/sample-video.webm` で生成しています。
+Photoshopで `export-store.jsx` を実行するとストア用サムネイルを、`export-screenshots.jsx` を実行すると実画面を使用した掲載画像を再作成できます。スクリプトは編集用PSDも作り直します。PSDを直接編集した場合は、そのPSDからPNGを書き出してください。
 
-サイズ要件: [Chromeウェブストア公式の掲載情報ガイド](https://developer.chrome.com/docs/webstore/cws-dashboard-listing/)（2026-09-07確認）。ストア画像は拡張機能本体のZIPに含めず、掲載情報の各欄へアップロードします。
+掲載画像はPNG単体で渡します。拡張機能本体の提出用ZIPには含めず、ストア掲載情報の画像欄へアップロードします。
 
-`node design/check-store.mjs` で3枚の画像サイズと、透過なしの8bit RGB PNG形式を検証できます。
+サイズ要件: [Chromeウェブストア公式の掲載情報ガイド](https://developer.chrome.com/docs/webstore/cws-dashboard-listing/)（2026-09-07確認）。`node design/check-store.mjs` で2枚の画像サイズと、透過なしの8bit RGB PNG形式を検証できます。

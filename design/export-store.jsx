@@ -44,17 +44,4 @@
   doc.flatten();
   doc.saveAs(new File(store + '/promo-small.png'), new PNGSaveOptions(), true, Extension.LOWERCASE);
   doc.close(SaveOptions.DONOTSAVECHANGES);
-  var samples = new Folder(dir + '/samples'); samples.create();
-  for (var i = 0; i < 6; i++) {
-    var sample = source.duplicate('sample', false);
-    for (var badge = 0; badge < 6; badge += 2) {
-      find('動画ラベル ' + badge, sample.layers).visible = false;
-      find('再生アイコン ' + badge, sample.layers).visible = false;
-    }
-    var x = 876 + (i % 3) * 298, y = 336 + Math.floor(i / 3) * 207;
-    sample.crop([x, y, x + 280, y + 160]);
-    sample.flatten();
-    sample.saveAs(new File(samples + '/sample-' + i + '.png'), new PNGSaveOptions(), true, Extension.LOWERCASE);
-    sample.close(SaveOptions.DONOTSAVECHANGES);
-  }
 }());

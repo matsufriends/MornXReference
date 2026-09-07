@@ -30,7 +30,7 @@ Live2D の WIP など「動いているものを一覧で見比べたい」用�
 - カテゴリ: 生産性 (Productivity) など
 - 言語: 日本語
 - アイコン: `icons/icon128.png`
-- スクリーンショット: `docs/store/screenshot-gallery.png` と `docs/store/screenshot-images.png` (各1280x800)。現在のギャラリーUIをサンプル投稿で表示した画像。実際のX上の投稿・作者ではありません
+- スクリーンショット: `docs/store/screenshot-gallery.png` (1280x800)。提供された実画面を、ぼかしを保ったまま枠と見出しで整えた画像
 - 小さいプロモーション画像（必須のサムネイル）: `docs/store/promo-small.png` (440x280)
 - プライバシーポリシー URL: https://github.com/matsufriends/MornXReference/blob/main/PRIVACY.md
 
