@@ -1,3 +1,5 @@
+![MornXReference](design/thumbnail.png)
+
 # MornXReference
 
 X (Twitter) のブックマークから動画・画像を集めて、X の画面内にグリッド状に並べて眺める Chrome 拡張です。
