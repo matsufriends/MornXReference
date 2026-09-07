@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "MornXReference",
-  "version": "0.1.12",
-  "description": "X のブックマークの動画・画像をグリッドで眺める",
+  "version": "0.1.13",
+  "description": "Xのブックマークを、画像・動画の一覧に。保存した参考資料をまとめて見比べられるChrome拡張です。",
   "permissions": [
     "storage"
   ],
