@@ -18,7 +18,10 @@ function saveSettings() {
 }
 let started = false;
 const seen = new Set();
-let fetchedCount = 0;
+let collecting = false;
+let pendingCount = 0;
+const fetchQueue = [];
+let activeFetches = 0;
 
 // --- gallery button ----------------------------------------------------
 // サイドバー項目の複製は X の再描画や選択状態のたびにズレるので、左上の X ロゴの右隣に
@@ -117,8 +120,9 @@ let known = new Set();
 let newHrefs = [];
 let anchorTile = null;
 
-function loadList() {
-  return new Promise((resolve) => chrome.storage.local.get(LIST_KEY, (r) => resolve(r[LIST_KEY] || [])));
+function loadSaved() {
+  // 一覧と投稿情報を一括で読み、保存済み投稿はメッセージの往復なしで表示する。
+  return new Promise((resolve) => chrome.storage.local.get(null, resolve));
 }
 
 function saveList(list) {
@@ -145,30 +149,52 @@ function collectNew() {
 }
 
 function fetchOne(href, isNew) {
-  chrome.runtime.sendMessage({ type: 'fetchTweet', url: href }, (res) => {
-    fetchedCount++;
-    addTile(href, res, isNew);
-    updateProgress();
-  });
+  fetchQueue.push({ href, isNew, overlay: overlayEl });
+  pendingCount++;
+  drainFetchQueue();
+}
+
+function drainFetchQueue() {
+  while (activeFetches < 4 && fetchQueue.length) {
+    const { href, isNew, overlay } = fetchQueue.shift();
+    activeFetches++;
+    chrome.runtime.sendMessage({ type: 'fetchTweet', url: href }, (res) => {
+      const error = chrome.runtime.lastError;
+      activeFetches--;
+      if (overlayEl === overlay) {
+        pendingCount--;
+        if (!error) addTile(href, res, isNew);
+        updateProgress();
+      }
+      drainFetchQueue();
+    });
+  }
 }
 
 async function startCollection(full = false) {
   if (started) return;
   started = true;
+  collecting = true;
   openOverlay();
+  const overlay = overlayEl;
 
-  const saved = full ? [] : await loadList();
+  const store = full ? {} : await loadSaved();
+  if (overlayEl !== overlay) return;
+  const saved = store[LIST_KEY] || [];
   known = new Set(saved);
   newHrefs = [];
   for (const href of saved) {
     seen.add(href);
-    fetchOne(href, false);
+    const id = href.match(/\/status\/(\d+)/)?.[1];
+    const cached = store[`mornXReferenceTweet:${id}`] || store.mornXReferenceCache?.[href];
+    if (cached && !cached.error && cached.media) addTile(href, cached, false);
+    else fetchOne(href, false);
   }
 
   let stableCount = 0;
   let lastHeight = -1;
   let quietPasses = 0;
-  for (let i = 0; i < 300 && overlayEl; i++) {
+  for (let i = 0; i < 300 && overlayEl === overlay; i++) {
     const { added, knownCount } = collectNew();
     // ブックマークは新しい順なので、既知のポストだけのページが続いたら差分走査は終わり
     if (known.size > 0) {
@@ -177,6 +203,7 @@ async function startCollection(full = false) {
     }
     window.scrollTo(0, document.scrollingElement.scrollHeight);
     await sleep(1500);
+    if (overlayEl !== overlay) return;
 
     const height = document.scrollingElement.scrollHeight;
     if (height === lastHeight) {
@@ -188,8 +215,10 @@ async function startCollection(full = false) {
     }
   }
   collectNew();
-  if (overlayEl) saveList([...newHrefs, ...saved.filter((h) => !newHrefs.includes(h))]);
-  updateProgress(true);
+  const newSet = new Set(newHrefs);
+  saveList([...newHrefs, ...saved.filter((h) => !newSet.has(h))]);
+  collecting = false;
+  updateProgress();
 }
 
 // --- overlay --------------------------------------------------------------
@@ -297,20 +326,20 @@ function openOverlay() {
     });
   }
   for (const sel of ['.mxr-search', '.mxr-from', '.mxr-to']) {
-    overlay.querySelector(sel).addEventListener('input', applyFilter);
+    overlay.querySelector(sel).addEventListener('input', () => applyFilter());
   }
   overlayEl = overlay;
   placeGalleryButton();
   updateProgress();
 }
 
-function applyFilter() {
+function applyFilter(tiles = overlayEl?.querySelectorAll('.mxr-tile')) {
   if (!overlayEl) return;
   const kind = overlayEl.querySelector('.mxr-kind-on').dataset.kind;
   const query = overlayEl.querySelector('.mxr-search').value.trim().toLowerCase();
   const from = overlayEl.querySelector('.mxr-from').value;
   const to = overlayEl.querySelector('.mxr-to').value;
-  for (const tile of overlayEl.querySelectorAll('.mxr-tile')) {
+  for (const tile of tiles) {
     const d = tile.dataset.date;
     const show =
       (!kind || tile.dataset.kind === kind) &&
@@ -327,7 +356,9 @@ function closeOverlay() {
   overlayEl = null;
   started = false;
   seen.clear();
-  fetchedCount = 0;
+  collecting = false;
+  pendingCount = 0;
+  fetchQueue.length = 0;
   anchorTile = null;
   viewportObserver.disconnect();
   placeGalleryButton();
@@ -345,6 +376,8 @@ function openLightbox(media, href, res, sourceEl) {
     el = sourceEl;
     const parent = el.parentElement;
     const next = el.nextSibling;
+    if (!el.hasAttribute('src')) el.src = media.src;
+    el.play().catch(() => {});
     el.controls = true;
     el.muted = settings.muted;
     restore = () => {
@@ -385,16 +418,23 @@ function openLightbox(media, href, res, sourceEl) {
   overlayEl.appendChild(box);
 }
 
-function updateProgress(done = false) {
+function updateProgress() {
   if (!overlayEl) return;
-  overlayEl.querySelector('.mxr-progress').textContent = `${done ? '' : '読み込み中 '}${seen.size} 件`;
+  overlayEl.querySelector('.mxr-progress').textContent = `${collecting || pendingCount ? '読み込み中 ' : ''}${seen.size} 件`;
 }
 
-// 画面外の動画は止めて、件数が多くても軽くする
+// メディアの URL は画面に入った時だけ設定する。動画は画面外で停止する。
 const viewportObserver = new IntersectionObserver((entries) => {
   for (const e of entries) {
-    if (e.isIntersecting) e.target.play().catch(() => {});
-    else e.target.pause();
+    const el = e.target;
+    if (e.isIntersecting && !el.hasAttribute('src')) {
+      if (el.dataset.poster) el.poster = el.dataset.poster;
+      el.src = el.dataset.src;
+    }
+    if (el.tagName === 'VIDEO') {
+      if (e.isIntersecting) el.play().catch(() => {});
+      else el.pause();
+    }
   }
 });
 
@@ -427,14 +467,13 @@ function addTile(href, res, isNew) {
     tile.dataset.date = date;
     const el = document.createElement(media.kind === 'video' ? 'video' : 'img');
     el.className = 'mxr-media';
-    el.src = media.src;
+    el.dataset.src = media.src;
     if (media.kind === 'video') {
-      el.autoplay = true;
       el.muted = true;
       el.loop = true;
       el.playsInline = true;
-      el.preload = 'metadata';
-      if (media.poster) el.poster = media.poster;
+      el.preload = 'none';
+      if (media.poster) el.dataset.poster = media.poster;
     }
     el.addEventListener('click', () => openLightbox(media, href, res, el));
     tile.appendChild(el);
@@ -454,9 +493,9 @@ function addTile(href, res, isNew) {
     if (isNew && anchorTile) grid.insertBefore(tile, anchorTile);
     else grid.appendChild(tile);
     if (!isNew && !anchorTile) anchorTile = tile;
-    if (media.kind === 'video') viewportObserver.observe(el);
+    applyFilter([tile]);
+    viewportObserver.observe(el);
   }
-  applyFilter();
 }
 
 // --- boot -----------------------------------------------------------------
